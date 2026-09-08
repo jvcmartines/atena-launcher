@@ -8,8 +8,11 @@ O launcher oficial do **Atena**, um servidor de Minecraft com modpack próprio.
 [![Versão](https://img.shields.io/github/v/release/jvcmartines/atena-launcher?label=vers%C3%A3o&color=7c5cff&style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
 [![Plataformas](https://img.shields.io/badge/windows%20%7C%20macos%20%7C%20linux-2b2b2b?style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
 [![Minecraft](https://img.shields.io/badge/forge%201.20.1-3ecf8e?style=for-the-badge)](https://atenasmp.com)
+[![Discord](https://img.shields.io/discord/1410636816024998059?label=discord&logo=discord&logoColor=white&color=5865F2&style=for-the-badge)](https://discord.gg/92cDk8rZKK)
 
-[Site](https://atenasmp.com) · [Wiki](https://wiki.atenasmp.com) · [Discord](https://discord.gg/SEU-CONVITE)
+[Site](https://atenasmp.com) · [Wiki](https://wiki.atenasmp.com) · [Discord](https://discord.gg/92cDk8rZKK)
+
+[![Entrar no Discord do Atena](https://discord.com/api/guilds/1410636816024998059/widget.png?style=banner2)](https://discord.gg/92cDk8rZKK)
 
 </div>
 
