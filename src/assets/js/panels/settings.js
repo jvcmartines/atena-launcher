@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord } from '../utils.js'
+import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord, skinChanger, skin2D } from '../utils.js'
 const { ipcRenderer, shell } = require('electron');
 const os = require('os');
 const fs = require('fs');
@@ -24,6 +24,7 @@ class Settings {
         this.backups()
         this.protectedFolders()
         this.discordAccount()
+        this.skin()
     }
 
     navBTN() {
@@ -122,7 +123,7 @@ class Settings {
                     if (instance.name == instanceSelect) {
                         let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
                         configClient.instance_select = newInstanceSelect.name
-                        await setStatus(newInstanceSelect.status)
+                        await setStatus(newInstanceSelect.status, newInstanceSelect)
                     }
                 }
             }
@@ -139,9 +140,10 @@ class Settings {
         document.getElementById("free-ram").textContent = `${freeMem} GB`;
 
         let sliderDiv = document.querySelector(".memory-slider");
-        // Teto: 24 GB é o máximo que faz sentido para o modpack, mas nunca mais
-        // que 80% da RAM da máquina — passar disso trava o sistema inteiro.
-        let sliderMax = Math.max(4, Math.min(24, Math.trunc((80 * totalMem) / 100)));
+        // Teto: 24 GB é o máximo que faz sentido para o modpack. O limite real
+        // é deixar 2 GB livres para o Windows — num PC de 16 GB isso dá 14, em
+        // vez dos 12 que a regra dos 80% permitia.
+        let sliderMax = Math.max(4, Math.min(24, Math.trunc(totalMem - 2)));
         sliderDiv.setAttribute("max", sliderMax);
 
         let ram = config?.java_config?.java_memory ? {
@@ -402,6 +404,108 @@ class Settings {
             // nunca ficar sem efeito.
             fs.mkdirSync(folder, { recursive: true });
             shell.openPath(folder);
+        });
+    }
+
+    /**
+     * Troca de skin, falando direto com a Mojang.
+     *
+     * A seção some para conta offline: sem conta Microsoft não existe skin do
+     * lado da Mojang para trocar.
+     */
+    async skin() {
+        let sections = document.querySelectorAll('.skin-section');
+        if (!sections.length) return;
+
+        let configClient = await this.db.readData('configClient');
+        let account = await this.db.readData('accounts', configClient?.account_selected);
+
+        if (!skinChanger.canChange(account)) {
+            sections.forEach(section => section.style.display = 'none');
+            return;
+        }
+
+        let body = document.querySelector('.skin-body');
+        let status = document.querySelector('.skin-status');
+        let fileInput = document.querySelector('.skin-file');
+        let variantButtons = document.querySelectorAll('.variant-btn');
+
+        let variant = 'classic';
+
+        const marcarVariante = escolhida => {
+            variant = escolhida;
+            variantButtons.forEach(btn => {
+                btn.classList.toggle('active-theme', btn.dataset.variant === escolhida);
+            });
+        };
+
+        const desenhar = async (url, modelo) => {
+            if (!url) return;
+            try {
+                body.src = await new skin2D().creatBodyTexture(url, modelo === 'slim');
+            } catch (err) {
+                console.error('[skin] não consegui desenhar a prévia:', err);
+            }
+        };
+
+        // Estado inicial: o que a Mojang diz que está em uso agora.
+        let profile = await skinChanger.profile(account);
+        if (profile) {
+            marcarVariante(profile.variant === 'slim' ? 'slim' : 'classic');
+            desenhar(profile.skinUrl, profile.variant);
+        } else {
+            marcarVariante('classic');
+            if (account?.profile?.skins?.[0]?.base64) {
+                desenhar(account.profile.skins[0].base64, 'classic');
+            }
+        }
+
+        variantButtons.forEach(btn => btn.addEventListener('click', () => marcarVariante(btn.dataset.variant)));
+
+        document.querySelector('.skin-choose').addEventListener('click', () => {
+            fileInput.value = '';
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async () => {
+            let file = fileInput.files[0];
+            if (!file) return;
+
+            status.className = 'skin-status working';
+            status.textContent = lang.t('skin.sending');
+
+            let result = await skinChanger.upload(account, file.path, variant);
+
+            if (result.error) {
+                status.className = 'skin-status error';
+                status.textContent = result.detail
+                    ? `${lang.t(result.error)} (${result.detail})`
+                    : lang.t(result.error);
+                return;
+            }
+
+            status.className = 'skin-status ok';
+            status.textContent = lang.t('skin.done');
+            desenhar(file.path.replace(/\\/g, '/').startsWith('http') ? file.path : `file://${file.path}`, variant);
+        });
+
+        document.querySelector('.skin-reset').addEventListener('click', async () => {
+            status.className = 'skin-status working';
+            status.textContent = lang.t('skin.resetting');
+
+            let result = await skinChanger.reset(account);
+
+            if (result.error) {
+                status.className = 'skin-status error';
+                status.textContent = lang.t(result.error);
+                return;
+            }
+
+            status.className = 'skin-status ok';
+            status.textContent = lang.t('skin.reset_done');
+
+            let atualizado = await skinChanger.profile(account);
+            if (atualizado) desenhar(atualizado.skinUrl, atualizado.variant);
         });
     }
 

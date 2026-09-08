@@ -19,7 +19,8 @@
         "icon": "node build.js --icon",
         "server": "npm --prefix server start",
         "server:install": "npm --prefix server install",
-        "build:local": "node build.js --obf=false --publish=never --build=platform"
+        "build:local": "node build.js --obf=false --publish=never --build=platform",
+        "build:ci": "node build.js --obf=true --publish=always --build=platform"
     },
     "license": "CCANC",
     "nodemonConfig": {

@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -22,6 +22,7 @@ class Home {
         this.copyServerIp()
         this.instancesSelect()
         this.reportNickname()
+        this.playersPopup()
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
 
@@ -110,13 +111,14 @@ class Home {
                         let configClient = await this.db.readData('configClient')
                         configClient.instance_select = newInstanceSelect.name
                         instanceSelect = newInstanceSelect.name
-                        setStatus(newInstanceSelect.status)
+                        setStatus(newInstanceSelect.status, newInstanceSelect)
                         await this.db.updateData('configClient', configClient)
                     }
                 }
             }
             if (instance.name == instanceSelect) {
-                setStatus(instance.status)
+                setStatus(instance.status, instance)
+                this.currentStatusInstance = instance
                 this.refreshState(instance)
             }
         }
@@ -136,7 +138,8 @@ class Home {
 
                 let options = instancesList.find(i => i.name == newInstanceSelect)
                 instancePopup.style.display = 'none'
-                await setStatus(options.status)
+                this.currentStatusInstance = options
+                await setStatus(options.status, options)
                 await this.refreshState(options)
             }
 
@@ -165,6 +168,65 @@ class Home {
 
         playBTN.addEventListener('click', () => this.startGame())
         instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
+    }
+
+    /**
+     * Clicar no card de jogadores abre a lista de quem está no servidor.
+     *
+     * Os nomes vêm do próprio protocolo do Minecraft, que limita a amostra
+     * (normalmente 12 nomes) e deixa o servidor escondê-la. Quando não vem
+     * lista, mostramos só a contagem — que é sempre confiável.
+     */
+    playersPopup() {
+        let card = document.querySelector('.status-player-count')
+        let popupBox = document.querySelector('.players-popup')
+        let closeBTN = document.querySelector('.close-players')
+        if (!card || !popupBox) return
+
+        card.addEventListener('click', async () => {
+            let list = document.querySelector('.players-list')
+            let countLine = document.querySelector('.players-count-line')
+
+            popupBox.style.display = 'flex'
+            list.innerHTML = `<div class="players-empty">${lang.t('home.players_loading')}</div>`
+            countLine.textContent = ''
+
+            let status = this.currentStatusInstance
+                ? await serverStatus(this.currentStatusInstance)
+                : null
+
+            if (!status || !status.online) {
+                list.innerHTML = `<div class="players-empty">${lang.t('home.status_down')}</div>`
+                return
+            }
+
+            countLine.textContent = lang.t('home.players_of', {
+                online: status.players.online,
+                max: status.players.max
+            })
+
+            let sample = status.players.sample || []
+
+            if (!sample.length) {
+                list.innerHTML = `<div class="players-empty">${lang.t(
+                    status.players.online ? 'home.players_hidden' : 'home.players_none'
+                )}</div>`
+                return
+            }
+
+            list.innerHTML = sample.map(player => `
+                <div class="player-row">
+                    <img class="player-face" alt=""
+                        src="https://mc-heads.net/avatar/${encodeURIComponent(player.id || player.name)}/32"
+                        onerror="this.style.visibility='hidden'">
+                    <span>${player.name.replace(/[<>&]/g, '')}</span>
+                </div>`).join('')
+        })
+
+        closeBTN.addEventListener('click', () => popupBox.style.display = 'none')
+        popupBox.addEventListener('click', e => {
+            if (e.target === popupBox) popupBox.style.display = 'none'
+        })
     }
 
     /** Instância selecionada no momento. */
@@ -358,14 +420,20 @@ class Home {
         });
 
         launch.on('estimated', (time) => {
+            if (!etaElement) return
             let hours = Math.floor(time / 3600);
             let minutes = Math.floor((time - hours * 3600) / 60);
             let seconds = Math.floor(time - hours * 3600 - minutes * 60);
-            console.log(`${hours}h ${minutes}m ${seconds}s`);
+
+            let restante = hours ? `${hours}h ${minutes}m` : minutes ? `${minutes}m ${seconds}s` : `${seconds}s`
+            etaElement.textContent = lang.t('home.eta', { time: restante })
         })
 
+        let speedElement = document.querySelector('.download-speed')
+        let etaElement = document.querySelector('.download-eta')
+
         launch.on('speed', (speed) => {
-            console.log(`${(speed / 1067008).toFixed(2)} Mb/s`)
+            if (speedElement) speedElement.textContent = `${(speed / 1067008).toFixed(1)} Mb/s`
         })
 
         launch.on('patch', patch => {
@@ -408,6 +476,8 @@ class Home {
             infoStartingBOX.style.display = "none"
             playInstanceBTN.style.display = "flex"
             infoStarting.innerHTML = lang.t('home.verifying')
+            if (speedElement) speedElement.textContent = ''
+            if (etaElement) etaElement.textContent = ''
             new logger(pkg.name, '#7289da');
             this.marked = false
             this.refreshState(options)
@@ -431,6 +501,8 @@ class Home {
             infoStartingBOX.style.display = "none"
             playInstanceBTN.style.display = "flex"
             infoStarting.innerHTML = lang.t('home.verifying')
+            if (speedElement) speedElement.textContent = ''
+            if (etaElement) etaElement.textContent = ''
             new logger(pkg.name, '#7289da');
             this.marked = false
             console.log(err);

@@ -11,7 +11,7 @@
                 <div class="stat-label server-ping" data-i18n="home.status_waiting"></div>
             </div>
 
-            <div class="stat glass status-player-count">
+            <div class="stat glass status-player-count" data-i18n-title="home.players_title">
                 <div class="stat-value player-count">0</div>
                 <div class="stat-label" data-i18n="home.players_label"></div>
             </div>
@@ -34,6 +34,10 @@
             <div class="info-starting-game">
                 <div class="info-starting-game-text" data-i18n="home.connecting"></div>
                 <progress value="0" max="0" class="progress-bar"></progress>
+                <div class="download-stats">
+                    <span class="download-speed"></span>
+                    <span class="download-eta"></span>
+                </div>
             </div>
         </div>
     </main>
@@ -66,6 +70,16 @@
             <div class="settings-btn icon-settings" data-i18n-title="home.settings_title"></div>
         </div>
     </footer>
+
+    <!-- quem está jogando agora -->
+    <div class="players-popup">
+        <div class="players-tab glass">
+            <div class="close-players icon-close"></div>
+            <p data-i18n="home.players_title"></p>
+            <div class="players-count-line"></div>
+            <div class="players-list content-scroll"></div>
+        </div>
+    </div>
 
     <!-- opções do modpack: trocar, reinstalar, abrir a pasta -->
     <div class="instance-popup">

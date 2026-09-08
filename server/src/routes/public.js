@@ -18,6 +18,7 @@ const store = require('./../lib/store');
 const manifest = require('../lib/manifest');
 const discord = require('../lib/discord');
 const players = require('../lib/players');
+const mcstatus = require('../lib/mcstatus');
 const { DEFAULT_CONFIG, toLauncherInstance } = require('../lib/defaults');
 const { encodePath } = require('../lib/paths');
 const { PUBLIC_URL, FILES_DIR } = require('../config');
@@ -121,6 +122,30 @@ router.get('/api/instances/:id/files', blockBanned, (req, res) => {
         size: file.size,
         hash: file.hash
     })));
+});
+
+/**
+ * Status do servidor de Minecraft: quem está online, ping, MOTD.
+ *
+ * O ping sai daqui, não do launcher: este servidor está ao lado do Minecraft,
+ * então é mais confiável, funciona mesmo se a rede do jogador bloquear a porta,
+ * e o cache evita que dezenas de launchers abertos virem um flood.
+ *
+ * O IP consultado é sempre o configurado na instância — nunca um vindo do
+ * cliente, senão isto viraria um scanner de portas de graça.
+ */
+router.get('/api/instances/:id/server-status', blockBanned, async (req, res) => {
+    const instances = store.read('instances', []);
+    const instance = instances.find(i => i.id === req.params.id);
+
+    if (!instance || instance.enabled === false || !players.canAccess(instance, req.player)) {
+        return res.status(404).json({ error: 'Modpack não encontrado.' });
+    }
+
+    const { ip, port } = instance.status || {};
+    if (!ip) return res.json({ online: false, players: { online: 0, max: 0, sample: [] } });
+
+    res.json(await mcstatus.status(ip, Number(port) || 25565));
 });
 
 /** Versão publicada — útil para o site mostrar "modpack v12". */

@@ -482,6 +482,45 @@ Discord — nem chega a escolher a conta de Minecraft.
 
 ---
 
+## Skin, jogadores online e outros confortos
+
+### Trocar a skin sem sair do launcher
+
+Em **Configurações → Contas**, o jogador vê o boneco dele, escolhe entre o
+modelo clássico (Steve) e o fino (Alex), e manda um PNG. O launcher fala direto
+com a API da Mojang, então a skin muda **em todo lugar** — no site, no jogo
+vanilla, em qualquer launcher — não só aqui.
+
+A seção só aparece para conta Microsoft: conta offline não existe do lado da
+Mojang e não tem skin para trocar.
+
+Antes de enviar, o launcher confere se o arquivo é mesmo um PNG de 64x64 (ou
+64x32, das skins antigas). Sem isso a Mojang devolve um erro genérico e o
+jogador fica sem saber o que houve.
+
+### Ver quem está jogando
+
+Clicando no card de jogadores da tela inicial, abre a lista de quem está no
+servidor agora, com a cabeça de cada um.
+
+Os nomes vêm do protocolo de status do próprio Minecraft — o mesmo que a lista
+de servidores do jogo usa. Duas limitações que valem saber: o protocolo manda
+no máximo ~12 nomes, e o servidor pode escolher não mandar nenhum. Quando isso
+acontece o launcher mostra só a contagem, que é sempre confiável.
+
+O ping sai do **servidor**, não do PC do jogador (`/api/instances/:id/server-status`).
+São três motivos: ele está ao lado do Minecraft e responde mais rápido, funciona
+mesmo se a rede do jogador bloquear a porta 25565, e o resultado fica em cache
+por 10 segundos — sem isso, cada launcher aberto viraria um ping no servidor.
+
+### Velocidade e tempo restante
+
+Durante a instalação aparecem a velocidade em Mb/s e quanto falta. Numa
+primeira instalação de mais de 1 GB, é a diferença entre "travou?" e "faltam
+3 minutos".
+
+---
+
 ## Idiomas
 
 O launcher abre em **inglês** por padrão. O jogador troca em
@@ -606,6 +645,8 @@ Todas as ações ficam registradas no **Histórico**.
 | "Já existe um servidor do Atena rodando" | Você tentou subir um segundo processo sobre a mesma pasta de dados. Isso apagaria dados, então o servidor se recusa a iniciar. Pare o outro (`sudo systemctl stop atena-launcher`) antes. |
 | O IP não copia ao clicar | Só acontece em ambiente sem área de transferência. O IP continua visível para digitar à mão. |
 | `Cannot create symbolic link` no build | É o instalador NSIS pedindo permissão que o Windows não dá. A pasta `dist/win-unpacked` sai certa mesmo assim. Veja a Parte 4. |
+| O `.exe` do build local está com o ícone do Electron | Mesma causa: o `rcedit`, que carimba o ícone, vive no pacote que falha de extrair. O build do GitHub Actions não tem esse problema — use o instalador da release. |
+| Só dá para alocar 12–13 GB de RAM | O teto é 24 GB, mas nunca passa de `RAM total − 2 GB`. Num PC de 16 GB isso dá 13. O limite é o hardware: acima disso o Windows fica sem memória e o jogo trava mais, não menos. |
 | O launcher abre em inglês | É o padrão. O jogador troca em Configurações → Launcher → Idioma. |
 
 Para ver o que está chegando no servidor, ligue `ATENA_LOG_REQUESTS=true` no `.env` e

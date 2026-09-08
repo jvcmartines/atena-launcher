@@ -17,6 +17,7 @@ import lang from './utils/lang.js';
 import backup from './utils/backup.js';
 import modpack from './utils/modpack.js';
 import discord from './utils/discord.js';
+import skinChanger from './utils/skinchanger.js';
 import { skin2D } from './utils/skin.js';
 import slider from './utils/slider.js';
 
@@ -104,7 +105,7 @@ async function headplayer(skinBase64) {
  * Consulta o servidor de Minecraft e preenche os cartões da tela inicial:
  * status, ping, jogadores online e o IP para copiar.
  */
-async function setStatus(opt) {
+async function setStatus(opt, instance) {
     let statusElement = document.querySelector('.server-status-text')
     let pingElement = document.querySelector('.server-ping')
     let ipElement = document.querySelector('.server-ip')
@@ -126,16 +127,58 @@ async function setStatus(opt) {
     if (ipElement) ipElement.textContent = port && Number(port) !== 25565 ? `${ip}:${port}` : ip
     if (taglineElement && nameServer) taglineElement.textContent = nameServer
 
+    // Caminho preferido: perguntar ao nosso servidor, que está ao lado do
+    // Minecraft. Além de mais confiável, é o único que traz os nomes.
+    let fromApi = instance?.url ? await serverStatus(instance) : null
+
+    if (fromApi) {
+        lastStatus = fromApi
+        if (!fromApi.online) return offline('home.status_down')
+
+        statusElement.classList.remove('red')
+        playersBox.classList.remove('red')
+        statusElement.innerHTML = lang.t('home.status_online')
+        if (pingElement) pingElement.innerHTML = `${fromApi.ping || 0} ms`
+        playersOnline.innerHTML = fromApi.players?.online ?? '0'
+        return
+    }
+
+    // Reserva: ping direto do PC do jogador.
     let status = new Status(ip, port);
     let statusServer = await status.getStatus().then(res => res).catch(err => err);
 
     if (statusServer.error) return offline('home.status_down')
+
+    lastStatus = {
+        online: true,
+        ping: statusServer.ms || 0,
+        players: { online: statusServer.playersConnect || 0, max: statusServer.playersMax || 0, sample: [] }
+    }
 
     statusElement.classList.remove('red')
     playersBox.classList.remove('red')
     statusElement.innerHTML = lang.t('home.status_online')
     if (pingElement) pingElement.innerHTML = `${statusServer.ms || 0} ms`
     playersOnline.innerHTML = statusServer.playersConnect || '0'
+}
+
+/** Último status conhecido, para o popup de jogadores não precisar repingar. */
+let lastStatus = null;
+
+function getLastStatus() {
+    return lastStatus;
+}
+
+/** Pergunta o status ao servidor do Atena (quem está online, ping, MOTD). */
+async function serverStatus(instance) {
+    try {
+        let url = instance.url.replace(/\/files$/, '/server-status')
+        let response = await fetch(url, { headers: config.headers() })
+        if (!response.ok) return null
+        return await response.json()
+    } catch {
+        return null
+    }
 }
 
 /** Tamanho legível, usado no resumo dos backups. */
@@ -158,6 +201,7 @@ export {
     backup as backup,
     modpack as modpack,
     discord as discord,
+    skinChanger as skinChanger,
     setBackground as setBackground,
     skin2D as skin2D,
     addAccount as addAccount,
@@ -165,5 +209,7 @@ export {
     slider as Slider,
     pkg as pkg,
     setStatus as setStatus,
+    getLastStatus as getLastStatus,
+    serverStatus as serverStatus,
     formatSize as formatSize
 }
