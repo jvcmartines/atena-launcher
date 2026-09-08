@@ -8,7 +8,7 @@
     "author": {
         "name": "Atena",
         "email": "contato@atena.com.br",
-        "url": "https://github.com/SEU-USUARIO"
+        "url": "https://github.com/jvcmartines"
     },
     "url": "https://launcher.atenasmp.com/api",
     "scripts": {
@@ -47,6 +47,6 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/SEU-USUARIO/atena-launcher.git"
+        "url": "git+https://github.com/jvcmartines/atena-launcher.git"
     }
 }
