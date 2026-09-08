@@ -1,9 +1,10 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-const { app, ipcMain, nativeTheme } = require('electron');
+const { app, ipcMain, nativeTheme, BrowserWindow } = require('electron');
 const { Microsoft } = require('minecraft-java-core');
 const { autoUpdater } = require('electron-updater')
 
@@ -66,6 +67,46 @@ ipcMain.on('main-window-show', () => MainWindow.getWindow().show())
 ipcMain.handle('Microsoft-window', async (_, client_id) => {
     return await new Microsoft(client_id).getAuth();
 })
+
+/**
+ * Janela da tela de autorização do Discord.
+ *
+ * Ela abre a página oficial do Discord; quando a pessoa aprova, o Discord
+ * redireciona para o nosso servidor, que fecha o ciclo. A promessa resolve
+ * quando a janela fecha — o resultado em si o launcher pega perguntando ao
+ * servidor, então nada sensível passa por aqui.
+ */
+let discordWindow = null;
+
+ipcMain.handle('discord-window', async (_, url) => {
+    if (discordWindow) discordWindow.destroy();
+
+    return await new Promise(resolve => {
+        discordWindow = new BrowserWindow({
+            width: 520,
+            height: 760,
+            title: 'Discord',
+            autoHideMenuBar: true,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                partition: 'discord-login'
+            }
+        });
+
+        discordWindow.loadURL(url);
+        discordWindow.once('ready-to-show', () => discordWindow?.show());
+
+        discordWindow.on('closed', () => {
+            discordWindow = null;
+            resolve('closed');
+        });
+    });
+});
+
+ipcMain.on('discord-window-close', () => {
+    if (discordWindow) discordWindow.destroy();
+});
 
 ipcMain.handle('is-dark-theme', (_, theme) => {
     if (theme === 'dark') return true

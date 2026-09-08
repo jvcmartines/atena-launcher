@@ -10,6 +10,7 @@ const { preductname } = require('./package.json');
 class Index {
     async init() {
         this.obf = true
+        this.publish = null
         this.Fileslist = []
         process.argv.forEach(async val => {
             if (val.startsWith('--icon')) {
@@ -19,6 +20,11 @@ class Index {
             if (val.startsWith('--obf')) {
                 this.obf = JSON.parse(val.split('=')[1])
                 this.Fileslist = this.getFiles("src");
+            }
+
+            if (val.startsWith('--publish')) {
+                // 'never' compila sem tentar enviar para as releases do GitHub.
+                this.publish = val.split('=')[1]
             }
 
             if (val.startsWith('--build')) {
@@ -60,11 +66,12 @@ class Index {
     async buildPlatform() {
         await this.Obfuscate();
         builder.build({
+            publish: this.publish || null,
             config: {
                 generateUpdatesFilesForAllChannels: false,
                 appId: preductname,
                 productName: preductname,
-                copyright: `Copyright © 2020-${new Date().getFullYear()} Luuxis`,
+                copyright: `Copyright © ${new Date().getFullYear()} Atena — baseado no Selvania-Launcher (Luuxis)`,
                 artifactName: "${productName}-${os}-${arch}.${ext}",
                 extraMetadata: { main: 'app/app.js' },
                 files: ["app/**/*", "package.json", "LICENSE.md"],
@@ -133,9 +140,9 @@ class Index {
                 }
             }
         }).then(() => {
-            console.log('le build est terminé')
+            console.log('Build finalizado! Os instaladores estão na pasta dist/')
         }).catch(err => {
-            console.error('Error during build!', err)
+            console.error('Erro durante o build!', err)
         })
     }
 

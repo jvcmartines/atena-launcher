@@ -1,0 +1,21 @@
+{
+    "name": "atena-launcher-server",
+    "version": "1.0.0",
+    "private": true,
+    "description": "API + painel web de administração do Atena Launcher",
+    "main": "src/index.js",
+    "engines": {
+        "node": ">=18"
+    },
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "node --watch src/index.js",
+        "criar-usuario": "node scripts/criar-usuario.js"
+    },
+    "dependencies": {
+        "express": "^5.2.1",
+        "multer": "^2.0.0",
+        "node-stream-zip": "^1.15.0"
+    },
+    "license": "CCANC"
+}

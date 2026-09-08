@@ -1,6 +1,7 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 // import panel
 import Login from './panels/login.js';
@@ -8,7 +9,7 @@ import Home from './panels/home.js';
 import Settings from './panels/settings.js';
 
 // import modules
-import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg } from './utils.js';
+import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg, lang, discord } from './utils.js';
 const { AZauth, Microsoft, Mojang } = require('minecraft-java-core');
 
 // libs
@@ -23,10 +24,24 @@ class Launcher {
         this.shortcut()
         await setBackground()
         this.initFrame();
-        this.config = await config.GetConfig().then(res => res).catch(err => err);
-        if (await this.config.error) return this.errorConnect()
         this.db = new database();
         await this.initConfigClient();
+
+        let configClient = await this.db.readData('configClient');
+
+        // Idioma antes de tudo, para nenhum texto piscar em inglês.
+        lang.load(configClient?.launcher_config?.lang || lang.defaultCode);
+        lang.apply(document);
+
+        // O token do Discord vai junto de toda requisição: é ele que decide
+        // quais modpacks este jogador enxerga e se ele está banido.
+        let token = configClient?.discord?.token || null;
+        config.setPlayerToken(token);
+        discord.configure(config.getApiUrl(), token);
+
+        this.config = await config.GetConfig().then(res => res).catch(err => err);
+        if (await this.config.error) return this.errorConnect()
+
         this.createPanels(Login, Home, Settings);
         this.startLauncher();
     }
@@ -51,9 +66,13 @@ class Launcher {
 
 
     errorConnect() {
+        let banned = this.config.error.banned;
+
         new popup().openPopup({
-            title: this.config.error.code,
-            content: this.config.error.message,
+            title: banned ? lang.t('discord.banned_title') : this.config.error.code,
+            content: banned
+                ? `${lang.t('discord.banned_text')}${this.config.error.message ? '<br><br>' + this.config.error.message : ''}`
+                : this.config.error.message,
             color: 'red',
             exit: true,
             options: true
@@ -93,11 +112,12 @@ class Launcher {
             await this.db.createData('configClient', {
                 account_selected: null,
                 instance_select: null,
+                discord: { token: null, player: null },
                 java_config: {
                     java_path: null,
                     java_memory: {
-                        min: 2,
-                        max: 4
+                        min: 4,
+                        max: 8
                     }
                 },
                 game_config: {
@@ -108,6 +128,8 @@ class Launcher {
                 },
                 launcher_config: {
                     download_multi: 5,
+                    lang: lang.defaultCode,
+                    protected: [],
                     theme: 'auto',
                     closeLauncher: 'close-launcher',
                     intelEnabledMac: true
@@ -123,12 +145,17 @@ class Launcher {
             let div = document.createElement('div');
             div.classList.add('panel', panel.id)
             div.innerHTML = fs.readFileSync(`${__dirname}/panels/${panel.id}.html`, 'utf8');
+            lang.apply(div);
             panelsElem.appendChild(div);
             new panel().init(this.config);
         }
     }
 
     async startLauncher() {
+        if (this.config.discord?.required && !this.config.discord?.linked) {
+            return changePanel('login');
+        }
+
         let accounts = await this.db.readAllData('accounts')
         let configClient = await this.db.readData('configClient')
         let account_selected = configClient ? configClient.account_selected : null
@@ -144,8 +171,8 @@ class Launcher {
                 if (account.meta.type === 'Xbox') {
                     console.log(`Account Type: ${account.meta.type} | Username: ${account.name}`);
                     popupRefresh.openPopup({
-                        title: 'Connexion',
-                        content: `Refresh account Type: ${account.meta.type} | Username: ${account.name}`,
+                        title: lang.t('login.signing_in'),
+                        content: lang.t('login.restoring', { name: account.name }),
                         color: 'var(--color)',
                         background: false
                     });
@@ -169,8 +196,8 @@ class Launcher {
                 } else if (account.meta.type == 'AZauth') {
                     console.log(`Account Type: ${account.meta.type} | Username: ${account.name}`);
                     popupRefresh.openPopup({
-                        title: 'Connexion',
-                        content: `Refresh account Type: ${account.meta.type} | Username: ${account.name}`,
+                        title: lang.t('login.signing_in'),
+                        content: lang.t('login.restoring', { name: account.name }),
                         color: 'var(--color)',
                         background: false
                     });
@@ -193,8 +220,8 @@ class Launcher {
                 } else if (account.meta.type == 'Mojang') {
                     console.log(`Account Type: ${account.meta.type} | Username: ${account.name}`);
                     popupRefresh.openPopup({
-                        title: 'Connexion',
-                        content: `Refresh account Type: ${account.meta.type} | Username: ${account.name}`,
+                        title: lang.t('login.signing_in'),
+                        content: lang.t('login.restoring', { name: account.name }),
                         color: 'var(--color)',
                         background: false
                     });

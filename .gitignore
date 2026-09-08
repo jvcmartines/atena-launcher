@@ -1,4 +1,4 @@
-# Generated
+# Gerado
 node_modules
 app
 test
@@ -6,3 +6,10 @@ dist
 node-v*
 data
 .DS_Store
+
+# Servidor / painel
+server/node_modules
+server/data
+server/files
+server/tmp
+server/.env

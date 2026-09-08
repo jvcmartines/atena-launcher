@@ -1,61 +1,95 @@
-<div class="container">
-    <div class="status-server">
-        <img class="server-status-icon" src="assets/images/icon/icon.png">
-        <div class="server-status-infos">
-            <div class="server-status-name">Minecraft</div>
-            <div class="server-status-text">operationeel - 0 ms</div>
-        </div>
-        <div class="status-player-count">
-            <div class="player-count">0</div>
-        </div>
-    </div>
+<div class="home">
 
-    <div class="home-bottom">
-        <div class="new-tab">
-            <div class="titre-tab-new">Actualités</div>
-            <div class="news-list content-scroll"></div>
-        </div>
-        <div class="social-tab">
-            <div class="social-list content-scroll">
-                <div data-url="https://discord.gg/e9q7Yr2cuQ" class="social-block">
-                    <div class="icon-discord icon-social"></div>
-                </div>
+    <main class="hero">
+        <img class="brand-logo" src="assets/images/atena-logo.png" alt="Atena Launcher">
+        <p class="brand-tagline" data-i18n="home.tagline"></p>
 
-                <div data-url="https://github.com/luuxis" class="social-block">
-                    <div class="icon-github icon-social"></div>
-                </div>
+        <!-- só o essencial: o servidor está no ar? quantos estão jogando? -->
+        <div class="stats">
+            <div class="stat glass">
+                <div class="stat-value server-status-text" data-i18n="home.status_checking"></div>
+                <div class="stat-label server-ping" data-i18n="home.status_waiting"></div>
+            </div>
 
-                <div data-url="https://www.youtube.com/LuuxisHD" class="social-block">
-                    <div class="icon-youtube icon-social"></div>
-                </div>
+            <div class="stat glass status-player-count">
+                <div class="stat-value player-count">0</div>
+                <div class="stat-label" data-i18n="home.players_label"></div>
             </div>
         </div>
-    </div>
 
-    <div class="sidebar">
-        <div class="player-options">
-            <div class="player-head"></div>
+        <!-- ip do servidor, com botão de copiar -->
+        <div class="ip-row glass" data-i18n-title="home.ip_title">
+            <span class="ip-label" data-i18n="home.ip_label"></span>
+            <span class="server-ip">atenasmp.com</span>
+            <span class="ip-copy" data-i18n="home.ip_copy"></span>
         </div>
 
+        <!-- jogar / instalar / atualizar -->
         <div class="play-elements">
             <div class="play-instance">
-                <button class="play-btn">Jouer</button>
-                <div class="instance-select icon-arrow"></div>
+                <button class="play-btn" data-i18n="home.play"></button>
+                <div class="pack-menu-btn icon-settings" data-i18n-title="home.pack_options"></div>
             </div>
+
             <div class="info-starting-game">
-                <div class="info-starting-game-text">Connexion...</div>
+                <div class="info-starting-game-text" data-i18n="home.connecting"></div>
                 <progress value="0" max="0" class="progress-bar"></progress>
             </div>
         </div>
+    </main>
 
-        <div class="settings-btn icon-settings"></div>
-    </div>
+    <footer class="home-bottom">
+        <div class="account-chip">
+            <div class="player-head"></div>
+            <div class="account-meta">
+                <div class="player-name" data-i18n="account.loading"></div>
+                <div class="player-type" data-i18n="account.connected"></div>
+            </div>
+        </div>
 
+        <div class="bottom-right">
+            <div class="social-list">
+                <div data-url="https://atenasmp.com" class="social-block" title="Site">
+                    <div class="icon-web icon-social"></div>
+                </div>
+                <div data-url="https://discord.gg/SEU-CONVITE" class="social-block" title="Discord">
+                    <div class="icon-discord icon-social"></div>
+                </div>
+                <div data-url="https://www.tiktok.com/@SEU-PERFIL" class="social-block" title="TikTok">
+                    <div class="icon-tiktok icon-social"></div>
+                </div>
+                <div data-url="https://www.youtube.com/@SEU-CANAL" class="social-block" title="YouTube">
+                    <div class="icon-youtube icon-social"></div>
+                </div>
+            </div>
+
+            <div class="settings-btn icon-settings" data-i18n-title="home.settings_title"></div>
+        </div>
+    </footer>
+
+    <!-- opções do modpack: trocar, reinstalar, abrir a pasta -->
     <div class="instance-popup">
-        <div class="instances-tab">
+        <div class="instances-tab glass">
             <div class="close-popup icon-close"></div>
-            <p>Choisissez votre instance...</p>
-            <div class="instances-List"></div>
+            <p data-i18n="home.pack_options"></p>
+
+            <div class="pack-summary">
+                <span class="current-instance-name">Atena</span>
+                <span class="pack-state"></span>
+            </div>
+
+            <div class="instances-List content-scroll"></div>
+
+            <div class="pack-actions">
+                <div class="pack-action" data-action="reinstall">
+                    <strong data-i18n="home.reinstall"></strong>
+                    <small data-i18n="home.reinstall_text"></small>
+                </div>
+                <div class="pack-action" data-action="folder">
+                    <strong data-i18n="home.open_folder"></strong>
+                    <small data-i18n="home.open_folder_text"></small>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -1,17 +1,24 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 const { AZauth, Mojang } = require('minecraft-java-core');
 const { ipcRenderer } = require('electron');
 
-import { popup, database, changePanel, accountSelect, addAccount, config, setStatus } from '../utils.js';
+import { popup, database, changePanel, accountSelect, addAccount, config, setStatus, lang, discord } from '../utils.js';
 
 class Login {
     static id = "login";
     async init(config) {
         this.config = config;
         this.db = new database();
+
+        // Com a verificação obrigatória e o Discord ainda não conectado, esta é
+        // a única tela que aparece — nem dá para escolher a conta antes.
+        if (this.config.discord?.required && !this.config.discord?.linked) {
+            return this.getDiscord();
+        }
 
         if (typeof this.config.online == 'boolean') {
             this.config.online ? this.getMicrosoft() : this.getCrack()
@@ -27,6 +34,46 @@ class Login {
         })
     }
 
+    /**
+     * Tela de conexão com o Discord. Depois de conectar, recarregamos a janela:
+     * o servidor passa a responder com os modpacks liberados para esta pessoa,
+     * e o launcher segue o fluxo normal de login.
+     */
+    async getDiscord() {
+        console.log('Initializing Discord verification...');
+
+        let tab = document.querySelector('.login-discord');
+        let button = document.querySelector('.connect-discord');
+        let status = document.querySelector('.discord-status');
+        tab.style.display = 'block';
+
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            status.className = 'discord-status working';
+            status.textContent = lang.t('discord.waiting');
+
+            let result = await discord.link();
+
+            if (result.error) {
+                button.disabled = false;
+                status.className = 'discord-status error';
+                status.textContent = result.detail
+                    ? `${lang.t(result.error)} — ${result.detail}`
+                    : lang.t(result.error);
+                return;
+            }
+
+            let configClient = await this.db.readData('configClient');
+            configClient.discord = { token: result.token, player: result.player };
+            await this.db.updateData('configClient', configClient);
+
+            status.className = 'discord-status';
+            status.textContent = lang.t('discord.linked_as', { name: result.player.globalName });
+
+            setTimeout(() => require('electron').ipcRenderer.send('main-window-reload'), 900);
+        });
+    }
+
     async getMicrosoft() {
         console.log('Initializing Microsoft login...');
         let popupLogin = new popup();
@@ -36,8 +83,8 @@ class Login {
 
         microsoftBtn.addEventListener("click", () => {
             popupLogin.openPopup({
-                title: 'Connexion',
-                content: 'Veuillez patienter...',
+                title: lang.t('login.signing_in'),
+                content: lang.t('common.wait'),
                 color: 'var(--color)'
             });
 
@@ -52,7 +99,7 @@ class Login {
 
             }).catch(err => {
                 popupLogin.openPopup({
-                    title: 'Erreur',
+                    title: lang.t('common.error'),
                     content: err,
                     options: true
                 });
@@ -72,8 +119,8 @@ class Login {
         connectOffline.addEventListener('click', async () => {
             if (emailOffline.value.length < 3) {
                 popupLogin.openPopup({
-                    title: 'Erreur',
-                    content: 'Votre pseudo doit faire au moins 3 caractères.',
+                    title: lang.t('common.error'),
+                    content: lang.t('login.nick_short'),
                     options: true
                 });
                 return;
@@ -81,8 +128,8 @@ class Login {
 
             if (emailOffline.value.match(/ /g)) {
                 popupLogin.openPopup({
-                    title: 'Erreur',
-                    content: 'Votre pseudo ne doit pas contenir d\'espaces.',
+                    title: lang.t('common.error'),
+                    content: lang.t('login.nick_spaces'),
                     options: true
                 });
                 return;
@@ -92,7 +139,7 @@ class Login {
 
             if (MojangConnect.error) {
                 popupLogin.openPopup({
-                    title: 'Erreur',
+                    title: lang.t('common.error'),
                     content: MojangConnect.message,
                     options: true
                 });
@@ -121,15 +168,15 @@ class Login {
 
         AZauthConnectBTN.addEventListener('click', async () => {
             PopupLogin.openPopup({
-                title: 'Connexion en cours...',
-                content: 'Veuillez patienter...',
+                title: lang.t('login.connecting'),
+                content: lang.t('common.wait'),
                 color: 'var(--color)'
             });
 
             if (AZauthEmail.value == '' || AZauthPassword.value == '') {
                 PopupLogin.openPopup({
-                    title: 'Erreur',
-                    content: 'Veuillez remplir tous les champs.',
+                    title: lang.t('common.error'),
+                    content: lang.t('login.fill_fields'),
                     options: true
                 });
                 return;
@@ -139,7 +186,7 @@ class Login {
 
             if (AZauthConnect.error) {
                 PopupLogin.openPopup({
-                    title: 'Erreur',
+                    title: lang.t('common.error'),
                     content: AZauthConnect.message,
                     options: true
                 });
@@ -156,15 +203,15 @@ class Login {
 
                 connectAZauthA2F.addEventListener('click', async () => {
                     PopupLogin.openPopup({
-                        title: 'Connexion en cours...',
-                        content: 'Veuillez patienter...',
+                        title: lang.t('login.connecting'),
+                        content: lang.t('common.wait'),
                         color: 'var(--color)'
                     });
 
                     if (AZauthA2F.value == '') {
                         PopupLogin.openPopup({
-                            title: 'Erreur',
-                            content: 'Veuillez entrer le code A2F.',
+                            title: lang.t('common.error'),
+                            content: lang.t('login.enter_2fa'),
                             options: true
                         });
                         return;
@@ -174,7 +221,7 @@ class Login {
 
                     if (AZauthConnect.error) {
                         PopupLogin.openPopup({
-                            title: 'Erreur',
+                            title: lang.t('common.error'),
                             content: AZauthConnect.message,
                             options: true
                         });
@@ -214,6 +261,11 @@ class Login {
         await this.db.updateData('configClient', configClient);
         await addAccount(account);
         await accountSelect(account);
+
+        // O servidor guarda o nick para a staff conseguir ligar o Discord da
+        // pessoa ao personagem dela no jogo.
+        discord.heartbeat(account.name);
+
         changePanel('home');
     }
 }

@@ -1,378 +1,547 @@
-.home .container {
+/**
+ * Tela inicial: tudo centralizado numa coluna só. Na tela ficam apenas as duas
+ * informações que importam antes de entrar — o servidor está no ar? quantos
+ * estão jogando? — mais o IP e o botão de jogar.
+ */
+
+.home {
     display: flex;
-    height: 100%;
     flex-direction: column;
-    align-items: center;
+    height: 100%;
+    padding: 10px 34px 24px;
 }
 
-/*******************************************************************************
- *                                                                             *
- * Status server                                                               *
- *                                                                             *
- ******************************************************************************/
+/* --------------------------------------------------------------- hero -- */
 
-.status-server {
-    position: relative;
+.hero {
+    flex: 1;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    background: var(--background);
-    width: 25rem;
-    height: 3rem;
-    color: var(--color);
-    border-radius: 10px;
-    margin-top: 3rem;
-    padding: 1rem;
+    justify-content: center;
+    min-height: 0;
     text-align: center;
 }
 
-.server-status-icon {
-    height: 3.3rem;
+.brand-logo {
+    width: min(300px, 48vw);
+    filter: drop-shadow(0 12px 34px rgba(0, 0, 0, 0.6));
+    animation: rise 0.7s var(--ease) backwards;
 }
 
-.server-status-name {
-    font-size: 1.5rem;
-    color: var(--color);
+.brand-tagline {
+    margin: 18px 0 0;
+    font-size: 12.5px;
+    letter-spacing: 0.6px;
+    color: var(--color-dim);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    animation: rise 0.7s 0.06s var(--ease) backwards;
 }
 
-.server-status-text {
-    font-size: 0.6rem;
-    color: #1AC707;
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
-.server-status-infos .red {
-    color: #FF0409;
+/* -------------------------------------------------------------- stats -- */
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(130px, 165px));
+    gap: 10px;
+    margin-top: 28px;
+    animation: rise 0.7s 0.12s var(--ease) backwards;
 }
 
-.status-player-count {
-    background: var(--shadow);
-    min-width: 3rem;
-    height: 3rem;
-    border-radius: 10px;
+.stat {
+    padding: 14px 12px;
+    border-radius: 14px;
 }
 
-.player-count {
-    font-size: 1.5rem;
-    margin: 0.4rem 0.5rem;
-}
-
-.status-player-count:after {
-    position: absolute;
-    content: '';
-    width: 10px;
-    height: 10px;
-    top: 10px;
-    right: 10px;
-    border-radius: 15px;
-    border: solid 5px var(--background);
-    background: #1AC707;
-}
-
-.red:after {
-    background: #FF0409;
-}
-
-.home-bottom {
-    position: relative;
-    width: 100%;
-    height: calc(100% - 80px - 8rem);
-    display: flex;
-}
-
-/*******************************************************************************
- *                                                                             *
- * news server                                                                 *
- *                                                                             *
- ******************************************************************************/
-
-.new-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 85%;
-    height: 100%;
-}
-
-.titre-tab-new {
-    margin-top: 1rem;
-    font-size: 2rem;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    background: var(--background-transparent);
-    color: var(--color);
-}
-
-.news-list {
-    width: 90%;
-    height: 100%;
-    border-radius: 10px;
-    margin: 1rem 0;
-}
-
-.news-block {
-    width: 100%;
-    margin: 0 0 1rem 0;
-    border-radius: 10px;
-    background: var(--background-transparent);
-}
-
-.news-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    align-items: center;
-}
-
-.header-text .title {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    font-size: 1.2rem;
-    text-align: center;
-}
-
-.news-header .date {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.news-content .bbWrapper {
-    padding: 0 1.5rem;
-    padding-bottom: 1rem;
-    font-size: 1.2rem;
-
-}
-
-.news-content .bbWrapper p {
-    font-weight: 100;
-    margin: 0;
-
-}
-
-.news-content .bbWrapper .news-author {
-    margin-top: 1rem;
-    text-align: end;
-    font-size: 0.8rem;
-}
-
-.news-content .bbWrapper .news-author span {
+.stat-value {
+    font-size: 18px;
     font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/*******************************************************************************
- *                                                                             *
- * social server                                                               *
- *                                                                             *
- ******************************************************************************/
+.stat-label {
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--color-faint);
+}
 
-.social-tab {
-    position: absolute;
+/* O primeiro card muda de cor conforme o servidor está no ar ou não. */
+.server-status-text {
+    color: var(--success);
+}
+
+.server-status-text.red {
+    color: var(--danger);
+}
+
+.status-player-count .player-count {
+    color: var(--gold);
+}
+
+.status-player-count.red .player-count {
+    color: var(--color-faint);
+}
+
+/* ----------------------------------------------------------------- ip -- */
+
+.ip-row {
     display: flex;
-    bottom: 0;
-    right: 0;
-    width: 15%;
-    height: calc(80% - 1rem);
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.social-list {
-    border-radius: 10px;
-    height: 100%;
-}
-
-.social-block {
-    display: flex;
-    background: var(--background-transparent);
-    width: 90px;
-    height: 90px;
-    margin-bottom: 1rem;
-    border-radius: 10px;
-    font-size: 2rem;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 9px 9px 9px 16px;
+    border-radius: 999px;
     cursor: pointer;
-    align-items: center;
-    justify-content: center;
-}
-
-.social-block .icon-social {
-    pointer-events: none;
-    background-repeat: no-repeat;
-    height: 55%;
-    width: 55%;
-    filter: var(--svg-color);
-}
-
-/*******************************************************************************
- *                                                                             *
- * sidebar                                                                     *
- *                                                                             *
- ******************************************************************************/
-
-.sidebar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    height: 90px;
-    background: var(--background-transparent);
-}
-
-.player-options {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 15px;
-    height: 3rem;
-    margin: 0 1.5rem;
-}
-
-.player-head {
-    background: url('../../images/default/setve.png'), no-repeat;
-    background-size: cover;
-    image-rendering: pixelated;
+    animation: rise 0.7s 0.18s var(--ease) backwards;
     transition: var(--transition);
-    height: 3rem;
-    width: 3rem;
-    pointer-events: none;
-    border-radius: 15px;
 }
 
-.player-menu {
-    color: var(--element-color);
-    transform: rotate(270deg);
-    pointer-events: none;
+.ip-row:hover {
+    border-color: var(--stroke-strong);
 }
+
+.ip-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    color: var(--color-faint);
+}
+
+.server-ip {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--gold-100);
+}
+
+.ip-copy {
+    padding: 5px 13px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--color-dim);
+    background: var(--background-element);
+    border-radius: 999px;
+    transition: var(--transition);
+}
+
+.ip-row:hover .ip-copy {
+    color: var(--gold);
+}
+
+.ip-copy.copied {
+    color: var(--wine-900);
+    background: var(--success);
+}
+
+/* --------------------------------------------------------- botão jogar - */
 
 .play-elements {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: min(340px, 78vw);
+    margin-top: 30px;
+    animation: rise 0.7s 0.24s var(--ease) backwards;
 }
 
 .play-instance {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    border: solid 3px var(--element-color);
-    border-radius: 15px;
-    height: 3.2rem;
-    padding-right: 1.9rem;
+    gap: 8px;
 }
 
 .play-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 17px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-200) 0%, var(--gold) 42%, var(--gold-600) 100%);
     border: none;
-    border-radius: 10px;
-    background: none;
-    color: var(--color);
-    font-size: 2rem;
-    font-weight: bolder;
-    padding: 0 1.5rem;
-    pointer-events: none;
-}
-
-.instance-select {
-    display: flex;
-    align-items: center;
-    position: absolute;
-    right: -3;
-    top: -2;
-    color: var(--element-color);
-    font-size: 1rem;
-    height: calc(100% - 1px);
-    border: solid 3px var(--element-color);
-    text-align: center;
-    border-radius: 15px;
-    padding: 0 0.5rem;
+    border-radius: 14px;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(223, 161, 59, 0.3);
+    transition: var(--transition);
 }
 
-.instance-select:before {
-    transform: rotate(270deg);
-    pointer-events: none;
+.play-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(223, 161, 59, 0.45);
+}
+
+.play-btn:active {
+    transform: translateY(0);
+}
+
+/* Reflexo que atravessa o botão de tempos em tempos. */
+.play-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    transform: skewX(-20deg);
+    animation: sheen 5s var(--ease) infinite;
+}
+
+@keyframes sheen {
+
+    0%,
+    76% {
+        left: -60%;
+    }
+
+    100% {
+        left: 130%;
+    }
+}
+
+/* Engrenagem ao lado do botão: opções do modpack. */
+.pack-menu-btn {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    flex-shrink: 0;
+    font-size: 16px;
+    color: var(--color-dim);
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pack-menu-btn:hover {
+    color: var(--gold);
+    border-color: var(--stroke-strong);
 }
 
 .info-starting-game {
     display: none;
-    text-align: center;
+}
+
+.info-starting-game-text {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
 }
 
 .progress-bar {
+    width: 100%;
+    height: 8px;
     appearance: none;
-    height: 10px;
-    margin: 0.5rem 0;
+    border: none;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--background-element);
 }
 
 .progress-bar::-webkit-progress-bar {
-    background-color: var(--background);
-    border: solid 1px var(--element-color);
-    border-radius: 10px;
+    background: var(--background-element);
+    border-radius: 999px;
 }
 
 .progress-bar::-webkit-progress-value {
-    background-color: var(--element-color);
+    background: linear-gradient(90deg, var(--gold-600), var(--gold-100));
+    border-radius: 999px;
+    transition: width 0.25s var(--ease);
+}
+
+/* ------------------------------------------------------------ rodapé --- */
+
+.home-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--stroke);
+}
+
+.account-chip {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+
+.player-head {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
     border-radius: 10px;
+    background-color: var(--background-element);
+    background-image: url('../../images/default/setve.png');
+    background-size: cover;
+    background-position: center;
+    image-rendering: pixelated;
+    border: 1px solid var(--stroke);
+}
+
+.account-meta {
+    min-width: 0;
+    line-height: 1.3;
+    text-align: left;
+}
+
+.player-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-type {
+    font-size: 10.5px;
+    color: var(--color-faint);
+}
+
+.bottom-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.social-list {
+    display: flex;
+    gap: 8px;
+}
+
+.social-block {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--stroke);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.social-block:hover {
+    border-color: var(--stroke-strong);
+    background: var(--glass-hover);
+    transform: translateY(-3px);
+}
+
+.icon-social {
+    width: 16px;
+    height: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: var(--svg-color);
+    pointer-events: none;
 }
 
 .settings-btn {
-    width: 3rem;
-    height: 3rem;
-    font-size: 3rem;
-    color: var(--element-color);
-    margin: 0 1.5rem;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+    color: var(--color-dim);
+    border: 1px solid var(--stroke);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
+.settings-btn:hover {
+    color: var(--gold);
+    border-color: var(--stroke-strong);
+    transform: rotate(45deg);
+}
+
+/* ------------------------------------------------ opções do modpack ---- */
+
 .instance-popup {
-    position: absolute;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
     display: none;
-    width: 100%;
-    height: 100%;
-    background: #000000b3;
-    z-index: 10;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
+    background: #000000b3;
+    backdrop-filter: blur(6px);
 }
 
 .instances-tab {
     position: relative;
-    background: var(--background);
-    border-radius: 10px;
-    padding: 1rem 3rem;
+    width: min(440px, 86vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 26px;
+    animation: pop-in 0.3s var(--ease);
+}
+
+.instances-tab > p {
+    margin: 0 0 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
 }
 
 .close-popup {
     position: absolute;
-    display: flex;
-    top: 10px;
-    right: 10px;
-    background: var(--shadow);
-    height: 30px;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
     width: 30px;
-    border-radius: 10px;
-    align-items: center;
-    justify-content: center;
+    height: 30px;
+    font-size: 11px;
+    color: var(--color-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
-.instances-tab p {
-    margin-top: 1.5rem;
-    font-size: 2rem;
+.close-popup:hover {
+    color: var(--danger);
+    background: var(--background-element);
+}
+
+/* resumo: qual modpack e em que estado ele está */
+.pack-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--stroke);
+}
+
+.current-instance-name {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(180deg, var(--gold-100) 0%, var(--gold) 48%, var(--gold-600) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.pack-state {
+    font-size: 11.5px;
+    color: var(--color-dim);
+}
+
+.instances-List {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 34vh;
+    margin-bottom: 16px;
+    padding-right: 6px;
 }
 
 .instance-elements {
+    padding: 13px 16px;
+    font-size: 14px;
+    font-weight: 700;
     background: var(--background-element);
-    text-align: center;
-    border-radius: 10px;
-    margin: 0.5rem 0;
-    font-size: 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
     cursor: pointer;
+    transition: var(--transition);
 }
 
 .instance-elements:hover {
-    background: var(--element-color);
+    border-color: var(--stroke-strong);
+    transform: translateX(4px);
 }
 
 .active-instance {
-    background: var(--element-color);
+    color: var(--gold);
+    border-color: var(--stroke-strong);
+    background: linear-gradient(90deg, rgba(242, 199, 92, 0.16), transparent);
+}
+
+/* ações: reinstalar, abrir a pasta */
+.pack-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pack-action {
+    padding: 13px 16px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pack-action:hover {
+    border-color: var(--stroke-strong);
+    transform: translateX(4px);
+}
+
+.pack-action strong {
+    display: block;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.pack-action small {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-dim);
+    pointer-events: none;
+}
+
+/* -------------------------------------------------------- responsivo --- */
+
+@media (max-height: 620px) {
+    .brand-logo {
+        width: min(240px, 44vw);
+    }
+
+    .stats,
+    .play-elements {
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 620px) {
+    .home {
+        padding: 10px 18px 18px;
+    }
 }

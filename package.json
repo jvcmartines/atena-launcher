@@ -1,25 +1,33 @@
 {
-    "name": "Selvania-Launcher",
-    "preductname": "Selvania Launcher",
-    "version": "2.2.2",
-    "description": "Launcher Mincraft pour le serveur Selvania",
+    "name": "atena-launcher",
+    "preductname": "Atena Launcher",
+    "productName": "Atena Launcher",
+    "version": "1.0.0",
+    "description": "Launcher oficial do servidor Atena - Minecraft Forge 1.20.1",
     "main": "src/app.js",
     "author": {
-        "name": "luuxis, Inc.",
-        "email": "contact@luuxis.fr",
-        "url": "https://github.com/luuxis"
+        "name": "Atena",
+        "email": "contato@atena.com.br",
+        "url": "https://github.com/SEU-USUARIO"
     },
-    "url": "http://luuxcraft.fr/api/user/bb8f5247-1d38-41bb-ab6d-3200471a06b2",
+    "url": "https://launcher.atenasmp.com/api",
     "scripts": {
         "start": "cross-env-shell NODE_ENV=dev electron .",
         "dev": "cross-env-shell DEV_TOOL=open nodemon --exec npm start",
         "build": "node build.js --obf=true --build=platform",
-        "icon": "node build.js --icon"
+        "build:debug": "node build.js --obf=false --build=platform",
+        "icon": "node build.js --icon",
+        "server": "npm --prefix server start",
+        "server:install": "npm --prefix server install",
+        "build:local": "node build.js --obf=false --publish=never --build=platform"
     },
     "license": "CCANC",
     "nodemonConfig": {
         "ext": "js,html,css",
-        "ignore": "**/test"
+        "ignore": [
+            "**/test",
+            "server/**"
+        ]
     },
     "dependencies": {
         "electron-store": "^8.2.0",
@@ -39,6 +47,6 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/luuxis/Selvania-Launcher.git"
+        "url": "git+https://github.com/SEU-USUARIO/atena-launcher.git"
     }
 }

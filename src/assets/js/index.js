@@ -1,64 +1,66 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
+ *
+ * Janela de abertura: mostra a logo enquanto procura atualizações do launcher
+ * e confere se o servidor está em manutenção.
  */
 
 const { ipcRenderer, shell } = require('electron');
 const pkg = require('../package.json');
 const os = require('os');
-import { config, database } from './utils.js';
+import { config, database, lang } from './utils.js';
 const nodeFetch = require("node-fetch");
 
 
 class Splash {
     constructor() {
         this.splash = document.querySelector(".splash");
-        this.splashMessage = document.querySelector(".splash-message");
-        this.splashAuthor = document.querySelector(".splash-author");
         this.message = document.querySelector(".message");
         this.progress = document.querySelector(".progress");
+
         document.addEventListener('DOMContentLoaded', async () => {
             let databaseLauncher = new database();
             let configClient = await databaseLauncher.readData('configClient');
+
+            // O idioma padrão é o inglês até o jogador escolher outro.
+            lang.load(configClient?.launcher_config?.lang || lang.defaultCode);
+
             let theme = configClient?.launcher_config?.theme || "auto"
             let isDarkTheme = await ipcRenderer.invoke('is-dark-theme', theme).then(res => res)
             document.body.className = isDarkTheme ? 'dark global' : 'light global';
+
             if (process.platform == 'win32') ipcRenderer.send('update-window-progress-load')
             this.startAnimation()
         });
     }
 
     async startAnimation() {
-        let splashes = [
-            { "message": "Je... vie...", "author": "Luuxis" },
-            { "message": "Salut je suis du code.", "author": "Luuxis" },
-            { "message": "Linux n'est pas un os, mais un kernel.", "author": "Luuxis" }
-        ];
-        let splash = splashes[Math.floor(Math.random() * splashes.length)];
-        this.splashMessage.textContent = splash.message;
-        this.splashAuthor.children[0].textContent = "@" + splash.author;
+        this.setStatus(lang.t('splash.searching'));
+
         await sleep(100);
-        document.querySelector("#splash").style.display = "block";
-        await sleep(500);
+        document.querySelector("#splash").style.display = "flex";
+        await sleep(400);
         this.splash.classList.add("opacity");
-        await sleep(500);
+        await sleep(400);
         this.splash.classList.add("translate");
-        this.splashMessage.classList.add("opacity");
-        this.splashAuthor.classList.add("opacity");
         this.message.classList.add("opacity");
-        await sleep(1000);
+        await sleep(700);
         this.checkUpdate();
     }
 
     async checkUpdate() {
-        this.setStatus(`Recherche de mise à jour...`);
-
-        ipcRenderer.invoke('update-app').then().catch(err => {
-            return this.shutdown(`erreur lors de la recherche de mise à jour :<br>${err.message}`);
+        // Não conseguir falar com o GitHub (repositório ainda não configurado,
+        // sem internet, API fora do ar) não pode impedir ninguém de jogar:
+        // seguimos direto para a checagem de manutenção.
+        ipcRenderer.invoke('update-app').catch(err => {
+            console.error('[update] checagem falhou, seguindo sem atualizar:', err);
+            this.maintenanceCheck();
         });
 
         ipcRenderer.on('updateAvailable', () => {
-            this.setStatus(`Mise à jour disponible !`);
+            this.setStatus(lang.t('splash.available'));
             if (os.platform() == 'win32') {
                 this.toggleProgress();
                 ipcRenderer.send('start-update');
@@ -67,7 +69,9 @@ class Splash {
         })
 
         ipcRenderer.on('error', (event, err) => {
-            if (err) return this.shutdown(`${err.message}`);
+            if (!err) return;
+            console.error('[update] erro do autoUpdater, seguindo sem atualizar:', err);
+            this.maintenanceCheck();
         })
 
         ipcRenderer.on('download-progress', (event, progress) => {
@@ -76,7 +80,7 @@ class Splash {
         })
 
         ipcRenderer.on('update-not-available', () => {
-            console.error("Mise à jour non disponible");
+            console.log("Nenhuma atualização disponível");
             this.maintenanceCheck();
         })
     }
@@ -104,37 +108,41 @@ class Splash {
         if (os.platform() == 'darwin') latest = this.getLatestReleaseForOS('mac', '.dmg', latestRelease);
         else if (os == 'linux') latest = this.getLatestReleaseForOS('linux', '.appimage', latestRelease);
 
-
-        this.setStatus(`Mise à jour disponible !<br><div class="download-update">Télécharger</div>`);
+        this.setStatus(`${lang.t('splash.available')}<br><div class="download-update">${lang.t('splash.download')}</div>`);
         document.querySelector(".download-update").addEventListener("click", () => {
             shell.openExternal(latest.browser_download_url);
-            return this.shutdown("Téléchargement en cours...");
+            return this.shutdown(lang.t('splash.downloading'));
         });
     }
 
 
     async maintenanceCheck() {
+        if (this.checked) return;
+        this.checked = true;
+
         config.GetConfig().then(res => {
             if (res.maintenance) return this.shutdown(res.maintenance_message);
             this.startLauncher();
         }).catch(e => {
             console.error(e);
-            return this.shutdown("Aucune connexion internet détectée,<br>veuillez réessayer ultérieurement.");
+            return this.shutdown(lang.t('splash.offline'));
         })
     }
 
     startLauncher() {
-        this.setStatus(`Démarrage du launcher`);
+        this.setStatus(lang.t('splash.starting'));
         ipcRenderer.send('main-window-open');
         ipcRenderer.send('update-window-close');
     }
 
     shutdown(text) {
-        this.setStatus(`${text}<br>Arrêt dans 5s`);
-        let i = 4;
+        let seconds = 5;
+        this.setStatus(lang.t('splash.closing', { text, seconds }));
+
         setInterval(() => {
-            this.setStatus(`${text}<br>Arrêt dans ${i--}s`);
-            if (i < 0) ipcRenderer.send('update-window-close');
+            seconds -= 1;
+            this.setStatus(lang.t('splash.closing', { text, seconds }));
+            if (seconds < 0) ipcRenderer.send('update-window-close');
         }, 1000);
     }
 

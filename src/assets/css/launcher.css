@@ -4,13 +4,40 @@
 @import 'panels/home.css';
 @import 'panels/settings.css';
 
+/**
+ * Casca do launcher: janela sem moldura nativa, barra de título própria,
+ * popup e o contêiner dos painéis.
+ */
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     padding: 0;
+    height: 100vh;
+    overflow: hidden;
     user-select: none;
     color: var(--color);
-    font-family: 'Poppins';
-    font-weight: bolder;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 400;
+    background-color: var(--background);
+    background-position: center !important;
+    background-size: cover !important;
+    letter-spacing: 0.1px;
+}
+
+/* Brilho dourado no topo, por cima do print do servidor. */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(900px 420px at 50% -12%, rgba(242, 199, 92, 0.16), transparent 70%),
+        radial-gradient(700px 500px at 100% 100%, rgba(76, 19, 48, 0.4), transparent 65%);
+    z-index: 0;
 }
 
 img {
@@ -18,178 +45,248 @@ img {
     user-select: none;
 }
 
-* {
-    outline: none;
-}
-
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.content-scroll {
-    overflow: auto;
-}
-
-.content-scroll::-webkit-scrollbar {
-    width: 0;
-}
+/* ---------------------------------------------------- barra de título --- */
 
 .dragbar {
     position: fixed;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 26px;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
     -webkit-app-region: drag;
-    z-index: 11;
+    z-index: 5;
 }
 
-.darwin .frame {
-    background: transparent;
+.frame {
     position: fixed;
-    top: 0px;
-    z-index: 11;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    height: 44px;
     -webkit-app-region: no-drag;
-    display: none;
 }
 
+/* Os dois conjuntos de botões nascem escondidos; o launcher.js liga só o do
+   sistema em uso alternando a classe .hide (o nome vem do projeto original,
+   mas o efeito é justamente mostrar). */
+.darwin .frame,
 .other .frame {
-    background: transparent;
-    position: fixed;
-    top: 0px;
-    right: 0px;
-    z-index: 11;
-    -webkit-app-region: no-drag;
     display: none;
 }
 
 .frame.hide {
-    display: block;
+    display: flex;
 }
 
-.darwin .button-frame {
-    position: relative;
-    display: table-cell;
-    width: 20px;
-    height: 26px;
-    transition: color .2s, background-color .2s;
+.darwin .frame {
+    left: 14px;
+    gap: 8px;
+}
+
+.other .frame {
+    right: 0;
+}
+
+.button-frame {
+    display: grid;
+    place-items: center;
+    color: var(--color-dim);
+    cursor: pointer;
+    transition: var(--transition);
 }
 
 .other .button-frame {
-    position: relative;
-    display: table-cell;
-    width: 30px;
-    height: 26px;
-    transition: color .2s, background-color .2s;
-    color: black;
-    cursor: pointer;
+    width: 46px;
+    height: 44px;
+    font-size: 11px;
 }
 
-.button-frame:before {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    width: 14px;
-    height: 14px;
-    font-size: 14px;
-    color: #f8f9f9;
+.other .button-frame:hover {
+    background: var(--background-element);
+    color: var(--color);
 }
 
-.darwin-icon-minimize,
-.darwin-icon-maximize,
-.darwin-icon-close {
-    position: relative;
+.other #close:hover {
+    background: var(--danger);
+    color: #fff;
 }
 
-.darwin-icon-minimize:before,
-.darwin-icon-maximize:before,
-.darwin-icon-close:before {
-    content: '';
-    position: absolute;
-    border-radius: 50%;
+/* macOS: as três bolinhas. */
+.darwin .button-frame {
     width: 12px;
     height: 12px;
-    cursor: pointer;
+    border-radius: 50%;
+    font-size: 0;
 }
 
-.darwin-icon-maximize:before {
-    background: #07d014;
+.darwin-icon-close {
+    background: #ff5f57;
 }
 
-.darwin-icon-minimize:before {
-    background: #ffbd2e;
+.darwin-icon-minimize {
+    background: #febc2e;
 }
 
-.darwin-icon-close:before {
-    background: #ff6047;
+.darwin-icon-maximize {
+    background: #28c840;
 }
 
-.icon-close:hover {
-    background: #e21212;
+.darwin .button-frame:hover {
+    filter: brightness(1.2);
 }
 
-.icon-minimize:hover,
-.icon-restore-down:hover,
-.icon-maximize:hover {
-    background-color: #0000009d;
-}
+/* ------------------------------------------------------------ painéis --- */
 
-.popup {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.popup-tab {
-    width: 40%;
-    padding: 15px;
-    background: var(--background);
-    border-radius: 15px;
-    z-index: 10;
-}
-
-.popup-title {
-    text-align: center;
-    font-size: 2rem;
-    border-bottom: solid 4px var(--color);
-    margin-bottom: 1rem;
-}
-
-.popup-options {
-    display: none;
-    align-items: end;
-    flex-direction: column;
-}
-
-.popup-button {
-    background: none;
-    color: var(--color);
-    border: solid 4px var(--element-color);
-    border-radius: 10px;
-    padding: 0.3rem 4rem;
-    font-size: inherit;
-    font-weight: bold;
-    margin: 15px 10px;
+.panels {
+    position: relative;
+    height: 100vh;
+    z-index: 1;
 }
 
 .panel {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    z-index: 0;
-    pointer-events: none;
+    inset: 0;
+    display: none;
+    padding: 44px 0 0;
 }
 
-.active {
-    opacity: 1;
-    z-index: 1;
-    pointer-events: all;
+.panel.active {
+    display: block;
+    animation: panel-in 0.45s var(--ease);
+}
+
+@keyframes panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------------------------------------------------------- superfícies - */
+
+.glass {
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(130%);
+    -webkit-backdrop-filter: blur(20px) saturate(130%);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+}
+
+/* ------------------------------------------------------------- popup ---- */
+
+.popup {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #000000b3;
+    backdrop-filter: blur(6px);
+    -webkit-app-region: no-drag;
+}
+
+.popup-tab {
+    width: min(460px, 86vw);
+    padding: 28px 30px;
+    text-align: center;
+    background: var(--glass-strong);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    animation: pop-in 0.3s var(--ease);
+}
+
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: scale(0.94) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.popup-title {
+    margin-bottom: 10px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.popup-content {
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: break-word;
+    max-height: 46vh;
+    overflow-y: auto;
+}
+
+.popup-options {
+    display: none;
+    justify-content: center;
+    margin-top: 22px;
+}
+
+.popup-button {
+    padding: 10px 34px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-200), var(--gold-600));
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.popup-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--glow-gold);
+}
+
+/* ------------------------------------------------- controles genéricos -- */
+
+input,
+select,
+textarea,
+button {
+    font-family: 'Poppins', sans-serif;
+}
+
+input[type='text'],
+input[type='password'],
+input[type='number'] {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--color);
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: var(--transition);
+}
+
+input[type='text']:focus,
+input[type='password']:focus,
+input[type='number']:focus {
+    border-color: var(--stroke-strong);
+    box-shadow: 0 0 0 3px rgba(242, 199, 92, 0.1);
+}
+
+input::placeholder {
+    color: var(--color-faint);
 }

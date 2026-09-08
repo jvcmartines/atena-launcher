@@ -1,6 +1,7 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 
 const { ipcRenderer } = require('electron');

@@ -1,6 +1,7 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)/
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 
 'use strict';
@@ -41,6 +42,23 @@ export default class Slider {
         this.touchRight.addEventListener('mousedown', (event) => this.onStart(document.querySelector('.slider-touch-right'), event));
         this.touchLeft.addEventListener('touchstart', (event) => this.onStart(document.querySelector('.slider-touch-left'), event));
         this.touchRight.addEventListener('touchstart', (event) => this.onStart(document.querySelector('.slider-touch-right'), event));
+    }
+
+    /**
+     * Recalcula as medidas do slider.
+     *
+     * O construtor lê offsetWidth, que é 0 enquanto a aba está escondida com
+     * display:none — sem isso os dois puxadores nascem empilhados na esquerda.
+     * Chame quando a aba aparecer, ou quando a janela mudar de tamanho.
+     */
+    refresh() {
+        if (!this.slider.offsetWidth) return;
+
+        this.reset();
+        this.maxX = this.slider.offsetWidth - this.touchRight.offsetWidth;
+        this.initialValue = this.lineSpan.offsetWidth - this.normalizeFact;
+        this.setMinValue(this.minValue);
+        this.setMaxValue(this.maxValue);
     }
 
     reset() {

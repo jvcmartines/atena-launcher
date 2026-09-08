@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Painel — Atena Launcher</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ============================================================ login -->
+    <div class="auth-screen" id="auth">
+        <div class="auth-card">
+            <h1>Atena</h1>
+            <p class="subtitle" id="auth-subtitle">Painel de administração do launcher</p>
+
+            <form id="login-form">
+                <label class="field">
+                    <span>Usuário</span>
+                    <input type="text" name="username" autocomplete="username" required>
+                </label>
+                <label class="field">
+                    <span>Senha</span>
+                    <input type="password" name="password" autocomplete="current-password" required>
+                </label>
+                <label class="field" id="setup-confirm" hidden>
+                    <span>Confirme a senha</span>
+                    <input type="password" name="confirm" autocomplete="new-password">
+                </label>
+                <button class="primary" type="submit" style="width:100%" id="login-submit">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================== app -->
+    <div class="app" id="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="mark">A</div>
+                <div>
+                    <strong>Atena</strong>
+                    <span>painel do launcher</span>
+                </div>
+            </div>
+
+            <div class="nav-item active" data-page="modpacks">Modpacks</div>
+            <div class="nav-item" data-page="news">Notícias</div>
+            <div class="nav-item" data-page="launcher">Launcher</div>
+            <div class="nav-item" data-page="players">Jogadores</div>
+            <div class="nav-item" data-page="staff">Staff</div>
+            <div class="nav-item" data-page="log">Histórico</div>
+
+            <div class="sidebar-footer">
+                <strong id="current-user">—</strong>
+                <button class="link" id="change-password">Trocar minha senha</button><br>
+                <button class="link" id="logout">Sair</button>
+            </div>
+        </aside>
+
+        <main class="main">
+
+            <!-- ------------------------------------------------- modpacks -->
+            <section class="page active" id="page-modpacks">
+                <div class="page-head">
+                    <div>
+                        <h2>Modpacks</h2>
+                        <p>Cada modpack é uma instância separada. Os jogadores escolhem qual jogar dentro do
+                            launcher.</p>
+                    </div>
+                    <button class="primary" id="new-instance">Novo modpack</button>
+                </div>
+
+                <div class="grid cols-2" id="instance-list"></div>
+
+                <div id="instance-detail" hidden>
+                    <div class="page-head" style="margin-top:26px">
+                        <div>
+                            <h2 id="detail-title">—</h2>
+                            <p id="detail-subtitle" class="mono"></p>
+                        </div>
+                        <button class="small" id="close-detail">Fechar</button>
+                    </div>
+
+                    <div class="tabs">
+                        <div class="tab active" data-tab="files">Arquivos</div>
+                        <div class="tab" data-tab="publish">Publicar</div>
+                        <div class="tab" data-tab="settings">Configurações</div>
+                    </div>
+
+                    <!-- arquivos -->
+                    <div class="tab-panel active" id="tab-files">
+                        <div class="card">
+                            <h3>Enviar arquivos</h3>
+                            <p class="hint">
+                                O jeito mais rápido é mandar um <b>.zip</b> com o conteúdo do seu
+                                <code>.minecraft</code> (as pastas <code>mods</code>, <code>config</code>,
+                                <code>kubejs</code>…). Também dá para arrastar arquivos ou uma pasta inteira aqui.
+                            </p>
+
+                            <div class="dropzone" id="dropzone">
+                                Arraste arquivos ou pastas aqui, ou use os botões abaixo.
+                            </div>
+
+                            <div class="row">
+                                <button id="pick-files">Enviar arquivos</button>
+                                <button id="pick-folder">Enviar pasta</button>
+                                <button id="pick-zip">Enviar .zip</button>
+                                <button id="new-folder">Nova pasta</button>
+                                <div class="spacer"></div>
+                                <button class="danger small" id="wipe-instance">Apagar tudo</button>
+                            </div>
+
+                            <div id="upload-progress" hidden style="margin-top:14px">
+                                <div class="row" style="margin-bottom:6px">
+                                    <span id="upload-label" class="muted">Enviando…</span>
+                                </div>
+                                <progress id="upload-bar" value="0" max="100"></progress>
+                            </div>
+
+                            <input type="file" id="input-files" multiple hidden>
+                            <input type="file" id="input-folder" webkitdirectory directory multiple hidden>
+                            <input type="file" id="input-zip" accept=".zip" hidden>
+                        </div>
+
+                        <div class="card">
+                            <div class="breadcrumb" id="breadcrumb"></div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th class="nowrap">Tamanho</th>
+                                        <th class="nowrap">Modificado</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="file-rows"></tbody>
+                            </table>
+                            <div class="empty" id="files-empty" hidden>Esta pasta está vazia.</div>
+                        </div>
+                    </div>
+
+                    <!-- publicar -->
+                    <div class="tab-panel" id="tab-publish">
+                        <div class="card">
+                            <h3>Publicar uma nova versão</h3>
+                            <p class="hint">
+                                Subir arquivos <b>não</b> muda nada para os jogadores. Só quando você publica o
+                                servidor gera a lista de arquivos com as assinaturas SHA-1 — e é essa lista que o
+                                launcher usa para baixar somente o que mudou.
+                            </p>
+
+                            <div class="grid cols-3" style="margin-bottom:16px">
+                                <div>
+                                    <div class="muted" style="font-size:12px">Versão publicada</div>
+                                    <div style="font-size:20px" id="pub-version">—</div>
+                                </div>
+                                <div>
+                                    <div class="muted" style="font-size:12px">Arquivos em disco</div>
+                                    <div style="font-size:20px" id="pub-files">—</div>
+                                </div>
+                                <div>
+                                    <div class="muted" style="font-size:12px">Tamanho total</div>
+                                    <div style="font-size:20px" id="pub-size">—</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:14px" id="pub-status"></div>
+
+                            <label class="field">
+                                <span>O que mudou nesta versão (aparece no histórico)</span>
+                                <textarea id="pub-changelog"
+                                    placeholder="Ex.: adicionado Create 0.5.1, removido Optifine, ajustes de config"></textarea>
+                            </label>
+
+                            <div class="row">
+                                <button class="primary" id="do-publish">Publicar atualização</button>
+                                <span class="muted" id="publish-feedback"></span>
+                            </div>
+
+                            <div id="publish-progress" hidden style="margin-top:14px">
+                                <progress id="publish-bar" value="0" max="100"></progress>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Última publicação</h3>
+                            <div id="pub-history" class="muted">—</div>
+                        </div>
+                    </div>
+
+                    <!-- configurações da instância -->
+                    <div class="tab-panel" id="tab-settings">
+                        <form id="instance-form">
+                            <div class="card">
+                                <h3>Identificação</h3>
+                                <div class="grid cols-2">
+                                    <label class="field">
+                                        <span>Nome exibido no launcher</span>
+                                        <input type="text" name="displayName" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Identificador (pasta em disco, não muda)</span>
+                                        <input type="text" name="id" class="mono" disabled>
+                                    </label>
+                                </div>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="enabled">
+                                    <span>Visível para os jogadores
+                                        <small>Desmarque para esconder este modpack do launcher sem apagar
+                                            nada.</small></span>
+                                </label>
+                            </div>
+
+                            <div class="card">
+                                <h3>Versão do jogo</h3>
+                                <p class="hint">Para o Atena: Minecraft <b>1.20.1</b> com loader <b>forge</b>. Em
+                                    "versão do loader" você pode usar <code>latest</code>,
+                                    <code>recommended</code> ou fixar uma build (ex.:
+                                    <code>1.20.1-47.3.0</code>) — fixar é mais seguro, porque garante que todo mundo
+                                    roda exatamente o mesmo Forge.</p>
+                                <div class="grid cols-3">
+                                    <label class="field">
+                                        <span>Versão do Minecraft</span>
+                                        <input type="text" name="minecraft_version" placeholder="1.20.1" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Loader</span>
+                                        <select name="loader_type">
+                                            <option value="forge">forge</option>
+                                            <option value="neoforge">neoforge</option>
+                                            <option value="fabric">fabric</option>
+                                            <option value="quilt">quilt</option>
+                                            <option value="legacyfabric">legacyfabric</option>
+                                            <option value="none">nenhum (vanilla)</option>
+                                        </select>
+                                    </label>
+                                    <label class="field">
+                                        <span>Versão do loader</span>
+                                        <input type="text" name="loader_version" placeholder="1.20.1-47.3.0">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h3>Servidor mostrado no launcher</h3>
+                                <p class="hint">O IP aparece na tela inicial do launcher com um botão de copiar, e é
+                                    usado para mostrar se o servidor está no ar e quantas pessoas estão jogando.</p>
+                                <div class="grid cols-3">
+                                    <label class="field">
+                                        <span>Frase abaixo da logo</span>
+                                        <input type="text" name="nameServer" placeholder="servidor de RP com modpack próprio">
+                                    </label>
+                                    <label class="field">
+                                        <span>IP</span>
+                                        <input type="text" name="ip" placeholder="jogar.seudominio.com.br">
+                                    </label>
+                                    <label class="field">
+                                        <span>Porta</span>
+                                        <input type="number" name="port" value="25565">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h3>Sincronização dos arquivos</h3>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="verify">
+                                    <span>Modo estrito (recomendado)
+                                        <small>O launcher apaga do PC do jogador qualquer arquivo que não esteja no
+                                            modpack publicado. É o que impede mod extra e mantém todo mundo igual ao
+                                            servidor.</small></span>
+                                </label>
+
+                                <label class="field">
+                                    <span>Não mexer nestes arquivos e pastas (um por linha)</span>
+                                    <textarea name="ignored" class="code" rows="10"></textarea>
+                                </label>
+                                <p class="hint" style="margin:0">
+                                    São as coisas do jogador que o modo estrito não pode apagar: mundos,
+                                    prints, teclas configuradas, waypoints. <b>Dica:</b> se você quer que os jogadores
+                                    possam mexer nos configs sem serem sobrescritos a cada atualização, adicione
+                                    <code>config</code> nesta lista — em troca, ajustes de config que você fizer
+                                    param de chegar até eles.
+                                </p>
+                            </div>
+
+                            <div class="card">
+                                <h3>Backup antes de atualizar</h3>
+                                <p class="hint">
+                                    Antes de sincronizar o modpack, o launcher copia estas pastas para
+                                    <code>backups/</code> na máquina do jogador. Ele guarda as 5 cópias mais
+                                    recentes e apaga as antigas sozinho.<br><br>
+                                    Serve de rede de segurança: se você esquecer de colocar uma pasta na lista
+                                    de ignorados acima, o conteúdo do jogador ainda pode ser recuperado. Não
+                                    precisa repetir aqui o que já está ignorado — aquilo nunca é apagado.
+                                </p>
+                                <label class="field">
+                                    <span>Pastas e arquivos para copiar (um por linha)</span>
+                                    <textarea name="backup" class="code" rows="5"></textarea>
+                                </label>
+                            </div>
+
+                            <div class="card">
+                                <h3>Quem pode ver este modpack</h3>
+                                <p class="hint">
+                                    Este filtro roda no servidor: um modpack que a pessoa não pode ver simplesmente
+                                    não aparece para ela, nem os arquivos ficam acessíveis. É assim que se faz uma
+                                    versão de testes só para a staff.
+                                </p>
+
+                                <label class="field">
+                                    <span>Liberado para</span>
+                                    <select name="accessMode">
+                                        <option value="public">Todo mundo</option>
+                                        <option value="discord">Quem conectou o Discord</option>
+                                        <option value="roles">Quem tem um cargo específico no Discord</option>
+                                        <option value="players">Só jogadores escolhidos a dedo</option>
+                                    </select>
+                                </label>
+
+                                <label class="field" data-access="roles">
+                                    <span>IDs dos cargos liberados (um por linha)</span>
+                                    <textarea name="accessRoles" class="code" rows="3"
+                                        placeholder="1234567890123456789"></textarea>
+                                </label>
+                                <p class="hint" data-access="roles" style="margin-top:-6px">
+                                    Para pegar o ID de um cargo: no Discord, ative o Modo Desenvolvedor
+                                    (Configurações → Avançado), clique com o botão direito no cargo e escolha
+                                    "Copiar ID do cargo".
+                                </p>
+
+                                <label class="field" data-access="players">
+                                    <span>Jogadores liberados (um por linha)</span>
+                                    <textarea name="accessPlayers" class="code" rows="3"
+                                        placeholder="nome_de_usuario_do_discord"></textarea>
+                                </label>
+                                <p class="hint" data-access="players" style="margin-top:-6px">
+                                    Aceita o nome de usuário do Discord ou o ID. Dá para copiar direto da aba
+                                    Jogadores.
+                                </p>
+
+                                <p class="hint" data-access="discord roles players" style="margin:0">
+                                    <b>Atenção:</b> qualquer opção diferente de "todo mundo" exige que a verificação
+                                    por Discord esteja ligada em <b>Launcher → Verificação por Discord</b>.
+                                </p>
+                            </div>
+
+                            <div class="card">
+                                <h3>Whitelist por nick (opcional)</h3>
+                                <p class="hint">
+                                    Filtro simples pelo nick do Minecraft, feito dentro do launcher. Serve para
+                                    organizar, não para proteger — quem souber mexer contorna. Para valer de
+                                    verdade, use o controle de acesso acima.
+                                </p>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="whitelistActive">
+                                    <span>Ativar a whitelist por nick</span>
+                                </label>
+                                <label class="field">
+                                    <span>Nicks liberados (um por linha)</span>
+                                    <textarea name="whitelist" class="code" rows="4"></textarea>
+                                </label>
+                            </div>
+
+                            <div class="card">
+                                <h3>Argumentos avançados</h3>
+                                <p class="hint">Deixe vazio se não souber para que serve. Um argumento por linha.</p>
+                                <div class="grid cols-2">
+                                    <label class="field">
+                                        <span>Argumentos da JVM</span>
+                                        <textarea name="jvm_args" class="code" rows="4"
+                                            placeholder="-XX:+UseG1GC"></textarea>
+                                    </label>
+                                    <label class="field">
+                                        <span>Argumentos do jogo</span>
+                                        <textarea name="game_args" class="code" rows="4"></textarea>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <button class="primary" type="submit">Salvar configurações</button>
+                                <div class="spacer"></div>
+                                <button class="danger" type="button" id="delete-instance">Apagar este modpack</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ---------------------------------------------------- news -->
+            <section class="page" id="page-news">
+                <div class="page-head">
+                    <div>
+                        <h2>Notícias</h2>
+                        <p>A tela inicial do launcher é enxuta e não mostra notícias — elas ficam disponíveis em
+                            <span class="mono">/api/articles</span> para o site do Atena consumir.</p>
+                    </div>
+                    <button class="primary" id="new-news">Nova notícia</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th class="nowrap">Autor</th>
+                                <th class="nowrap">Data</th>
+                                <th class="nowrap">Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="news-rows"></tbody>
+                    </table>
+                    <div class="empty" id="news-empty" hidden>Nenhuma notícia ainda.</div>
+                </div>
+            </section>
+
+            <!-- ------------------------------------------------ launcher -->
+            <section class="page" id="page-launcher">
+                <div class="page-head">
+                    <div>
+                        <h2>Configuração do launcher</h2>
+                        <p>Vale para todos os modpacks. O launcher lê isso toda vez que abre.</p>
+                    </div>
+                </div>
+
+                <form id="config-form">
+                    <div class="card">
+                        <h3>Manutenção</h3>
+                        <label class="checkbox">
+                            <input type="checkbox" name="maintenance">
+                            <span>Bloquear o launcher
+                                <small>Ninguém consegue entrar enquanto isso estiver marcado. Use durante uma
+                                    troca grande de versão do modpack.</small></span>
+                        </label>
+                        <label class="field">
+                            <span>Mensagem exibida durante a manutenção (aceita HTML simples, ex.: &lt;br&gt;)</span>
+                            <textarea name="maintenance_message" rows="3"></textarea>
+                        </label>
+                    </div>
+
+                    <div class="card">
+                        <h3>Login dos jogadores</h3>
+                        <label class="field">
+                            <span>Tipo de login</span>
+                            <select name="onlineMode">
+                                <option value="microsoft">Conta Microsoft (Minecraft original)</option>
+                                <option value="offline">Offline — só o nick</option>
+                                <option value="azauth">Azuriom / AZauth</option>
+                            </select>
+                        </label>
+
+                        <label class="field" data-when="microsoft">
+                            <span>client_id do app no Azure (opcional)</span>
+                            <input type="text" name="client_id" class="mono"
+                                placeholder="deixe vazio para usar o padrão embutido">
+                        </label>
+                        <p class="hint" data-when="microsoft" style="margin-top:-6px">
+                            Sem preencher nada o login já funciona, usando o client_id público que vem na
+                            minecraft-java-core. Registrar o seu próprio app no Azure só é necessário se quiser a
+                            tela de login com a sua marca.
+                            Lembre que login Microsoft exige <code>online-mode=true</code> no servidor.
+                        </p>
+
+                        <label class="field" data-when="azauth">
+                            <span>URL do seu site Azuriom</span>
+                            <input type="url" name="azauthUrl" placeholder="https://seusite.com.br">
+                        </label>
+                    </div>
+
+                    <div class="card">
+                        <h3>Verificação por Discord</h3>
+                        <p class="hint">
+                            Com isso ligado, o jogador conecta a conta do Discord dentro do launcher. Aí você
+                            consegue liberar modpacks por cargo, banir alguém do launcher, e ver qual nick de
+                            Minecraft pertence a qual pessoa do Discord.
+                        </p>
+
+                        <label class="checkbox">
+                            <input type="checkbox" name="discordEnabled">
+                            <span>Ligar a verificação por Discord</span>
+                        </label>
+
+                        <label class="checkbox">
+                            <input type="checkbox" name="discordRequired">
+                            <span>Obrigatória
+                                <small>Sem conectar o Discord, o jogador não passa da tela de login.</small></span>
+                        </label>
+
+                        <div class="grid cols-2">
+                            <label class="field">
+                                <span>Client ID</span>
+                                <input type="text" name="discordClientId" class="mono">
+                            </label>
+                            <label class="field">
+                                <span>Client Secret</span>
+                                <input type="password" name="discordClientSecret" class="mono"
+                                    placeholder="deixe vazio para manter o atual">
+                            </label>
+                        </div>
+
+                        <label class="field">
+                            <span>ID do seu servidor do Discord (para ler os cargos)</span>
+                            <input type="text" name="discordGuildId" class="mono">
+                        </label>
+
+                        <label class="checkbox">
+                            <input type="checkbox" name="discordRequireGuild">
+                            <span>Recusar quem não está no seu servidor do Discord</span>
+                        </label>
+
+                        <p class="hint" style="margin:0">
+                            No <a href="https://discord.com/developers/applications" target="_blank">portal de
+                            desenvolvedores do Discord</a>, crie uma aplicação e em <b>OAuth2</b> adicione esta
+                            URL de redirecionamento, exatamente assim:<br>
+                            <code class="mono" id="discord-redirect">—</code>
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Pasta do jogo</h3>
+                        <label class="field">
+                            <span>Nome da pasta</span>
+                            <input type="text" name="dataDirectory" class="mono" placeholder="Atena">
+                        </label>
+                        <p class="hint" style="margin:0">
+                            Vira <code class="mono" id="datadir-preview">%appdata%\.Atena</code> no Windows.
+                            <b>Cuidado:</b> mudar isso faz todo mundo baixar o modpack de novo do zero, na pasta nova.
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Notícias por RSS (opcional)</h3>
+                        <label class="field">
+                            <span>URL do feed</span>
+                            <input type="url" name="rss" placeholder="deixe vazio para usar as notícias do painel">
+                        </label>
+                        <p class="hint" style="margin:0">Se preencher, o launcher passa a ler o feed e ignora a aba
+                            Notícias.</p>
+                    </div>
+
+                    <button class="primary" type="submit">Salvar</button>
+                </form>
+            </section>
+
+            <!-- ----------------------------------------------- jogadores -->
+            <section class="page" id="page-players">
+                <div class="page-head">
+                    <div>
+                        <h2>Jogadores</h2>
+                        <p>Quem conectou o Discord no launcher. Aqui você vê qual nick de Minecraft é de quem,
+                            e bloqueia o acesso de alguém ao launcher.</p>
+                    </div>
+                    <button class="small" id="reload-players">Atualizar</button>
+                </div>
+
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Discord</th>
+                                <th>Nicks no Minecraft</th>
+                                <th class="nowrap">No servidor</th>
+                                <th class="nowrap">Visto por último</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="player-rows"></tbody>
+                    </table>
+                    <div class="empty" id="players-empty" hidden>
+                        Ninguém conectou o Discord ainda. Ligue a verificação em Launcher → Verificação por Discord.
+                    </div>
+                </div>
+            </section>
+
+            <!-- --------------------------------------------------- staff -->
+            <section class="page" id="page-staff">
+                <div class="page-head">
+                    <div>
+                        <h2>Staff</h2>
+                        <p>Quem pode entrar neste painel. <b>Admin</b> gerencia contas e apaga modpacks;
+                            <b>staff</b> sobe arquivos, publica versões e escreve notícias.</p>
+                    </div>
+                    <button class="primary" id="new-user">Nova conta</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th class="nowrap">Cargo</th>
+                                <th class="nowrap">Criado em</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-rows"></tbody>
+                    </table>
+                    <div class="empty" id="staff-denied" hidden>Só administradores podem ver esta página.</div>
+                </div>
+            </section>
+
+            <!-- ------------------------------------------------ histórico -->
+            <section class="page" id="page-log">
+                <div class="page-head">
+                    <div>
+                        <h2>Histórico</h2>
+                        <p>Últimas 100 ações feitas no painel.</p>
+                    </div>
+                    <button class="small" id="reload-log">Atualizar</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="nowrap">Quando</th>
+                                <th class="nowrap">Quem</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-rows"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal">
+        <div class="modal" id="modal-body"></div>
+    </div>
+    <div class="toasts" id="toasts"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

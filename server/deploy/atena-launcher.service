@@ -1,0 +1,39 @@
+# Serviço systemd do painel/API do Atena Launcher.
+#
+#   sudo cp deploy/atena-launcher.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now atena-launcher
+#   sudo systemctl status atena-launcher
+#   journalctl -u atena-launcher -f      # ver os logs ao vivo
+#
+# Ajuste User, WorkingDirectory e ExecStart se você instalou em outro lugar.
+
+[Unit]
+Description=Atena Launcher — API e painel de administração
+After=network.target
+
+[Service]
+Type=simple
+User=atena
+Group=atena
+WorkingDirectory=/opt/atena-launcher/server
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+
+# As variáveis vêm do .env dentro de server/. Se preferir defini-las aqui,
+# use linhas Environment= — elas ganham do arquivo.
+# Environment=ATENA_PORT=3000
+
+# Endurecimento: o processo só escreve nas pastas de dados do próprio painel.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/atena-launcher/server/data /opt/atena-launcher/server/files /opt/atena-launcher/server/tmp
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

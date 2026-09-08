@@ -1,6 +1,7 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 
 const Store = require('electron-store');
@@ -34,7 +35,7 @@ class database {
         await this.initStore();
         let tableData = this.store.get(tableName, []);
 
-        // Générer un nouvel ID
+        // Gera um novo ID
         const maxId = tableData.length > 0
             ? Math.max(...tableData.map(item => item.ID || 0))
             : 0;

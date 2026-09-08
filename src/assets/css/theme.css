@@ -1,24 +1,123 @@
+/**
+ * Atena Launcher — sistema de design
+ *
+ * A paleta sai da própria logo do servidor: dourado sobre roxo-vinho escuro.
+ * Os nomes antigos (--color, --background, --shadow…) são mantidos porque o
+ * JS herdado do Selvania ainda referencia alguns deles.
+ */
+
 .global {
-    --element-color: #00bd7a;
-    --transition: all 0.5s cubic-bezier(1, 0.46, 0, 1.29);
-    --dark-color: #292929;
-    --light-color: rgb(245, 245, 245);
+    /* marca */
+    --gold-100: #FCEEC0;
+    --gold-200: #F8DC8E;
+    --gold: #F2C75C;
+    --gold-600: #DFA13B;
+    --gold-700: #B87A28;
+
+    --wine-900: #140309;
+    --wine-800: #1F0611;
+    --wine-700: #2C0918;
+    --wine-600: #3A0A22;
+    --wine-500: #4C1330;
+
+    --element-color: var(--gold);
+    --success: #5BD98C;
+    --danger: #FF6B6B;
+    --warning: #FFB74D;
+
+    --radius-sm: 10px;
+    --radius: 16px;
+    --radius-lg: 22px;
+
+    --font-mono: Consolas, 'Courier New', monospace;
+
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --transition: all 0.35s var(--ease);
+
+    /* compatibilidade com o código herdado */
+    --dark-color: var(--wine-800);
+    --light-color: #F7F1F3;
 }
 
 .dark {
-    --color: #F5F5F5;
-    --background: #292929;
-    --background-element: #424242;
-    --background-transparent: #2c2c2ccc;
-    --shadow: rgba(25, 25, 25, 0.7);
-    --svg-color: brightness(0) saturate(100%) invert(100%) sepia(55%) saturate(23%) hue-rotate(236deg) brightness(108%) contrast(92%);
+    --color: #F7EDF1;
+    --color-dim: #B9A0AC;
+    --color-faint: #7C6672;
+
+    --background: var(--wine-900);
+    --background-element: rgba(255, 255, 255, 0.06);
+    --background-transparent: rgba(24, 5, 14, 0.72);
+
+    --glass: rgba(26, 6, 15, 0.62);
+    --glass-strong: rgba(20, 4, 11, 0.86);
+    --glass-hover: rgba(44, 12, 27, 0.72);
+
+    --stroke: rgba(242, 199, 92, 0.15);
+    --stroke-strong: rgba(242, 199, 92, 0.34);
+
+    --shadow: rgba(0, 0, 0, 0.55);
+    --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.45);
+    --glow-gold: 0 0 28px rgba(242, 199, 92, 0.28);
+
+    --scrim: linear-gradient(180deg, rgba(16, 3, 10, 0.52) 0%, rgba(16, 3, 10, 0.76) 52%, rgba(16, 3, 10, 0.95) 100%);
+
+    --svg-color: brightness(0) saturate(100%) invert(93%) sepia(12%) saturate(360%) hue-rotate(310deg) brightness(103%) contrast(96%);
 }
 
 .light {
-    --color: #151515;
-    --background: rgb(245, 245, 245);
-    --background-element: #c2c2c2;
-    --background-transparent: rgba(204, 204, 204, 0.8);
-    --shadow: rgba(208, 208, 208, 0.7);
-    --svg-color: brightness(0) saturate(100%) invert(0%) sepia(5%) saturate(1719%) hue-rotate(357deg) brightness(94%) contrast(84%);
+    --color: #26101A;
+    --color-dim: #6C5460;
+    --color-faint: #937E89;
+
+    --background: #F4EEF0;
+    --background-element: rgba(58, 10, 34, 0.07);
+    --background-transparent: rgba(255, 252, 253, 0.82);
+
+    --glass: rgba(255, 251, 252, 0.76);
+    --glass-strong: rgba(255, 253, 254, 0.93);
+    --glass-hover: rgba(255, 255, 255, 0.9);
+
+    --stroke: rgba(58, 10, 34, 0.12);
+    --stroke-strong: rgba(184, 122, 40, 0.45);
+
+    --shadow: rgba(58, 10, 34, 0.18);
+    --shadow-card: 0 16px 40px rgba(58, 10, 34, 0.16);
+    --glow-gold: 0 0 24px rgba(223, 161, 59, 0.3);
+
+    --scrim: linear-gradient(180deg, rgba(255, 250, 246, 0.5) 0%, rgba(255, 248, 244, 0.72) 52%, rgba(252, 244, 240, 0.9) 100%);
+
+    --svg-color: brightness(0) saturate(100%) invert(9%) sepia(24%) saturate(1600%) hue-rotate(300deg) brightness(95%) contrast(96%);
+}
+
+/* --------------------------------------------------------- utilidades --- */
+
+.content-scroll {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--stroke-strong) transparent;
+}
+
+.content-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.content-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-scroll::-webkit-scrollbar-thumb {
+    background: var(--stroke-strong);
+    border-radius: 99px;
+}
+
+.content-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-600);
+}
+
+/* Texto em degradê dourado, usado nos títulos. */
+.gold-text {
+    background: linear-gradient(180deg, var(--gold-100) 0%, var(--gold) 45%, var(--gold-600) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }

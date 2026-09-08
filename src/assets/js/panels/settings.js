@@ -1,11 +1,13 @@
 /**
- * @author Luuxis
- * Luuxis License v1.0 (voir fichier LICENSE pour les détails en FR/EN)
+ * Atena Launcher — fork de Selvania-Launcher
+ * @author Luuxis (original) — adaptado para o servidor Atena
+ * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground } from '../utils.js'
-const { ipcRenderer } = require('electron');
+import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord } from '../utils.js'
+const { ipcRenderer, shell } = require('electron');
 const os = require('os');
+const fs = require('fs');
 
 class Settings {
     static id = "settings";
@@ -18,10 +20,14 @@ class Settings {
         this.javaPath()
         this.resolution()
         this.launcher()
+        this.language()
+        this.backups()
+        this.protectedFolders()
+        this.discordAccount()
     }
 
     navBTN() {
-        document.querySelector('.nav-box').addEventListener('click', e => {
+        document.querySelector('.nav-settings').addEventListener('click', e => {
             if (e.target.classList.contains('nav-settings-btn')) {
                 let id = e.target.id
 
@@ -42,6 +48,8 @@ class Settings {
 
                 if (activeContainerSettings) activeContainerSettings.classList.toggle('active-container-settings');
                 document.querySelector(`#${id}-tab`).classList.add('active-container-settings');
+
+                if (id == 'java') this.memorySlider?.refresh();
             }
         })
     }
@@ -53,8 +61,8 @@ class Settings {
                 let id = e.target.id
                 if (e.target.classList.contains('account')) {
                     popupAccount.openPopup({
-                        title: 'Connexion',
-                        content: 'Veuillez patienter...',
+                        title: lang.t('settings.wait'),
+                        content: lang.t('settings.processing'),
                         color: 'var(--color)'
                     })
 
@@ -72,8 +80,8 @@ class Settings {
 
                 if (e.target.classList.contains("delete-profile")) {
                     popupAccount.openPopup({
-                        title: 'Connexion',
-                        content: 'Veuillez patienter...',
+                        title: lang.t('settings.wait'),
+                        content: lang.t('settings.processing'),
                         color: 'var(--color)'
                     })
                     await this.db.deleteData('accounts', id);
@@ -127,35 +135,46 @@ class Settings {
         let totalMem = Math.trunc(os.totalmem() / 1073741824 * 10) / 10;
         let freeMem = Math.trunc(os.freemem() / 1073741824 * 10) / 10;
 
-        document.getElementById("total-ram").textContent = `${totalMem} Go`;
-        document.getElementById("free-ram").textContent = `${freeMem} Go`;
+        document.getElementById("total-ram").textContent = `${totalMem} GB`;
+        document.getElementById("free-ram").textContent = `${freeMem} GB`;
 
         let sliderDiv = document.querySelector(".memory-slider");
-        sliderDiv.setAttribute("max", Math.trunc((80 * totalMem) / 100));
+        // Teto: 24 GB é o máximo que faz sentido para o modpack, mas nunca mais
+        // que 80% da RAM da máquina — passar disso trava o sistema inteiro.
+        let sliderMax = Math.max(4, Math.min(24, Math.trunc((80 * totalMem) / 100)));
+        sliderDiv.setAttribute("max", sliderMax);
 
         let ram = config?.java_config?.java_memory ? {
-            ramMin: config.java_config.java_memory.min,
-            ramMax: config.java_config.java_memory.max
-        } : { ramMin: "1", ramMax: "2" };
+            ramMin: Number(config.java_config.java_memory.min),
+            ramMax: Number(config.java_config.java_memory.max)
+        } : { ramMin: 4, ramMax: 8 };
 
-        if (totalMem < ram.ramMin) {
-            config.java_config.java_memory = { min: 1, max: 2 };
+        // O padrão de fábrica (8 GB) não cabe em todo PC. Se o configurado passa
+        // do teto da máquina, recua para o maior valor que cabe.
+        if (ram.ramMax > sliderMax) {
+            let max = sliderMax;
+            let min = Math.max(1, Math.min(4, max - 1));
+            config.java_config.java_memory = { min, max };
             this.db.updateData('configClient', config);
-            ram = { ramMin: "1", ramMax: "2" }
+            ram = { ramMin: min, ramMax: max }
         };
 
         let slider = new Slider(".memory-slider", parseFloat(ram.ramMin), parseFloat(ram.ramMax));
+        this.memorySlider = slider;
+
+        // A aba nasce escondida, então as medidas só ficam corretas quando ela abre.
+        window.addEventListener("resize", () => this.memorySlider?.refresh());
 
         let minSpan = document.querySelector(".slider-touch-left span");
         let maxSpan = document.querySelector(".slider-touch-right span");
 
-        minSpan.setAttribute("value", `${ram.ramMin} Go`);
-        maxSpan.setAttribute("value", `${ram.ramMax} Go`);
+        minSpan.setAttribute("value", `${ram.ramMin} GB`);
+        maxSpan.setAttribute("value", `${ram.ramMax} GB`);
 
         slider.on("change", async (min, max) => {
             let config = await this.db.readData('configClient');
-            minSpan.setAttribute("value", `${min} Go`);
-            maxSpan.setAttribute("value", `${max} Go`);
+            minSpan.setAttribute("value", `${min} GB`);
+            maxSpan.setAttribute("value", `${max} GB`);
             config.java_config.java_memory = { min: min, max: max };
             this.db.updateData('configClient', config);
         });
@@ -166,7 +185,7 @@ class Settings {
         javaPathText.textContent = `${await appdata()}/${process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`}/runtime`;
 
         let configClient = await this.db.readData('configClient')
-        let javaPath = configClient?.java_config?.java_path || 'Utiliser la version de java livre avec le launcher';
+        let javaPath = configClient?.java_config?.java_path || lang.t('settings.java_bundled');
         let javaPathInputTxt = document.querySelector(".java-path-input-text");
         let javaPathInputFile = document.querySelector(".java-path-input-file");
         javaPathInputTxt.value = javaPath;
@@ -187,12 +206,12 @@ class Settings {
                 javaPathInputTxt.value = file;
                 configClient.java_config.java_path = file
                 await this.db.updateData('configClient', configClient);
-            } else alert("Le nom du fichier doit être java ou javaw");
+            } else alert(lang.t('settings.java_invalid'));
         });
 
         document.querySelector(".java-path-reset").addEventListener("click", async () => {
             let configClient = await this.db.readData('configClient')
-            javaPathInputTxt.value = 'Utiliser la version de java livre avec le launcher';
+            javaPathInputTxt.value = lang.t('settings.java_bundled');
             configClient.java_config.java_path = null
             await this.db.updateData('configClient', configClient);
         });
@@ -322,6 +341,154 @@ class Settings {
                 }
             }
         })
+    }
+
+    /**
+     * Seletor de idioma. O padrão é inglês; a escolha fica salva por jogador.
+     * Trocar recarrega a janela — é mais simples e mais seguro do que retraduzir
+     * tudo em memória, e garante que nenhum texto fica para trás.
+     */
+    async language() {
+        let box = document.querySelector('.lang-box');
+        if (!box) return;
+
+        let configClient = await this.db.readData('configClient');
+        let current = configClient?.launcher_config?.lang || lang.defaultCode;
+
+        box.innerHTML = lang.available.map(item => {
+            let active = item.code === current ? ' active-theme' : '';
+            return `<div class="theme-btn lang-btn${active}" data-lang="${item.code}">${item.label}</div>`;
+        }).join('');
+
+        box.addEventListener('click', async e => {
+            let code = e.target.dataset.lang;
+            if (!code || code === current) return;
+
+            let configClient = await this.db.readData('configClient');
+            configClient.launcher_config.lang = code;
+            await this.db.updateData('configClient', configClient);
+
+            ipcRenderer.send('main-window-reload');
+        });
+    }
+
+    /**
+     * Mostra onde ficam os backups do modpack selecionado e quanto ocupam.
+     * Quem decide o que é copiado é a staff, no painel de administração.
+     */
+    async backups() {
+        let pathElement = document.querySelector('.backup-path-txt');
+        let summary = document.querySelector('.backup-summary');
+        let openButton = document.querySelector('.backup-open');
+        if (!pathElement || !summary || !openButton) return;
+
+        let base = `${await appdata()}/${process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`}`;
+
+        let configClient = await this.db.readData('configClient');
+        let instances = await config.getInstanceList();
+        let selected = instances.find(i => i.name == configClient?.instance_select) || instances[0];
+        if (!selected) return;
+
+        let folder = backup.folderFor(base, selected.name);
+        pathElement.textContent = folder;
+
+        let stats = backup.stats(folder);
+        summary.textContent = stats.count
+            ? lang.t('settings.backups_count', { count: stats.count, size: formatSize(stats.size) })
+            : lang.t('settings.backups_none');
+
+        openButton.addEventListener('click', () => {
+            // A pasta só existe depois do primeiro backup; criamos para o botão
+            // nunca ficar sem efeito.
+            fs.mkdirSync(folder, { recursive: true });
+            shell.openPath(folder);
+        });
+    }
+
+    /**
+     * Mostra a conta do Discord conectada e permite desconectar.
+     * A seção some inteira quando a verificação está desligada no servidor.
+     */
+    async discordAccount() {
+        let sections = document.querySelectorAll('.discord-section');
+        if (!sections.length) return;
+
+        if (!this.config.discord?.enabled) {
+            sections.forEach(section => section.style.display = 'none');
+            return;
+        }
+
+        let avatar = document.querySelector('.discord-account .discord-avatar');
+        let name = document.querySelector('.discord-account .discord-name');
+        let sub = document.querySelector('.discord-account .discord-sub');
+        let action = document.querySelector('.discord-action');
+
+        let configClient = await this.db.readData('configClient');
+        let player = configClient?.discord?.player;
+
+        if (player) {
+            if (player.avatar) avatar.src = player.avatar;
+            avatar.style.display = player.avatar ? 'block' : 'none';
+            name.textContent = player.globalName || player.username;
+            sub.textContent = player.username;
+            action.textContent = lang.t('discord.disconnect');
+        } else {
+            avatar.style.display = 'none';
+            name.textContent = lang.t('discord.not_linked');
+            sub.textContent = '';
+            action.textContent = lang.t('discord.connect');
+        }
+
+        action.addEventListener('click', async () => {
+            let configClient = await this.db.readData('configClient');
+
+            if (configClient?.discord?.player) {
+                configClient.discord = { token: null, player: null };
+                await this.db.updateData('configClient', configClient);
+            } else {
+                action.textContent = lang.t('discord.waiting');
+                let result = await discord.link();
+                if (result.error) {
+                    action.textContent = lang.t('discord.connect');
+                    return alert(result.detail ? `${lang.t(result.error)} — ${result.detail}` : lang.t(result.error));
+                }
+                configClient.discord = { token: result.token, player: result.player };
+                await this.db.updateData('configClient', configClient);
+            }
+
+            ipcRenderer.send('main-window-reload');
+        });
+    }
+
+    /**
+     * Pastas que o jogador não quer que o launcher encoste.
+     *
+     * Elas entram na lista de ignorados na hora de sincronizar o modpack, então
+     * param de ser apagadas e de ser sobrescritas. O preço é deixar de receber
+     * as atualizações daquela pasta — está escrito na tela.
+     */
+    async protectedFolders() {
+        let field = document.querySelector('.protected-list');
+        let saveButton = document.querySelector('.protected-save');
+        if (!field || !saveButton) return;
+
+        let configClient = await this.db.readData('configClient');
+        field.value = (configClient?.launcher_config?.protected || []).join('\n');
+
+        saveButton.addEventListener('click', async () => {
+            let entries = field.value
+                .split('\n')
+                .map(line => line.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, ''))
+                .filter(Boolean);
+
+            let configClient = await this.db.readData('configClient');
+            configClient.launcher_config.protected = entries;
+            await this.db.updateData('configClient', configClient);
+
+            field.value = entries.join('\n');
+            saveButton.classList.add('saved');
+            setTimeout(() => saveButton.classList.remove('saved'), 1400);
+        });
     }
 }
 export default Settings;
