@@ -177,6 +177,184 @@ class Modpack {
         return [...expanded];
     }
 
+    /* ---------------------------------------------- baixar o modpack ----- */
+
+    /**
+     * Sincroniza o modpack com o servidor SEM abrir o jogo.
+     *
+     * Existe porque a minecraft-java-core faz tudo de uma vez: ela baixa e já
+     * inicia o Minecraft. Quem só queria atualizar acabava com o jogo aberto na
+     * cara. Aqui a atualização é um passo próprio, e jogar é outro.
+     *
+     * De quebra, isto dá o que a biblioteca não dá: progresso durante a
+     * conferência, que num modpack de 5 mil arquivos é a parte mais demorada.
+     *
+     * `aoProgresso({ fase, feitos, total, bytes, bytesTotais, arquivo })`
+     */
+    async sync(basePath, instance, { ignored = [], concorrencia = 5, aoProgresso } = {}) {
+        const pasta = this.dir(basePath, instance.name);
+        const arquivos = await this.manifest(instance.url);
+
+        if (!arquivos.length) return { baixados: 0, mantidos: 0, bytes: 0 };
+
+        const protegidos = new Set(ignored.map(e => String(e).replace(/\\/g, '/')));
+        const cache = this.readHashCache(pasta);
+        const cacheNovo = {};
+
+        /* --- 1. o que precisa vir do servidor ------------------------------ */
+
+        const faltando = [];
+        let mantidos = 0;
+
+        for (let i = 0; i < arquivos.length; i += 1) {
+            const arquivo = arquivos[i];
+            if (aoProgresso) aoProgresso({ fase: 'conferindo', feitos: i + 1, total: arquivos.length });
+
+            // O que o jogador protegeu não é tocado, nem para conferir.
+            if (protegidos.has(arquivo.path)) { mantidos += 1; continue; }
+
+            const completo = path.join(pasta, arquivo.path);
+
+            let stat;
+            try {
+                stat = fs.statSync(completo);
+            } catch {
+                faltando.push(arquivo);
+                continue;
+            }
+
+            if (stat.size !== arquivo.size) { faltando.push(arquivo); continue; }
+
+            // O SHA-1 é caro; guardamos o resultado por tamanho+data para a
+            // conferência seguinte custar quase nada. É a diferença entre
+            // esperar minutos toda vez e esperar só na primeira.
+            const chave = arquivo.path;
+            const anotado = cache[chave];
+            let hash;
+
+            if (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs) {
+                hash = anotado.hash;
+            } else {
+                hash = await this.sha1(completo);
+            }
+
+            if (hash === arquivo.hash) {
+                cacheNovo[chave] = { size: stat.size, mtimeMs: stat.mtimeMs, hash };
+                mantidos += 1;
+            } else {
+                faltando.push(arquivo);
+            }
+        }
+
+        /* --- 2. baixar o que falta ----------------------------------------- */
+
+        const bytesTotais = faltando.reduce((soma, f) => soma + (f.size || 0), 0);
+        let bytes = 0;
+        let baixados = 0;
+        let proximo = 0;
+        const falhas = [];
+
+        const trabalhar = async () => {
+            while (proximo < faltando.length) {
+                const arquivo = faltando[proximo++];
+                try {
+                    await this.baixarArquivo(pasta, arquivo, pedaco => {
+                        bytes += pedaco;
+                        if (aoProgresso) {
+                            aoProgresso({
+                                fase: 'baixando',
+                                feitos: baixados,
+                                total: faltando.length,
+                                bytes,
+                                bytesTotais,
+                                arquivo: arquivo.path
+                            });
+                        }
+                    });
+                    baixados += 1;
+
+                    const stat = fs.statSync(path.join(pasta, arquivo.path));
+                    cacheNovo[arquivo.path] = { size: stat.size, mtimeMs: stat.mtimeMs, hash: arquivo.hash };
+                } catch (err) {
+                    falhas.push({ path: arquivo.path, erro: err.message });
+                }
+            }
+        };
+
+        await Promise.all(Array.from({ length: Math.max(1, concorrencia) }, trabalhar));
+
+        this.writeHashCache(pasta, cacheNovo);
+        return { baixados, mantidos, bytes, falhas };
+    }
+
+    /**
+     * Baixa um arquivo para o lugar dele.
+     *
+     * Escreve num `.parte` e só então renomeia: se a internet cair no meio, o
+     * que fica no disco é lixo com outro nome, não um .jar pela metade que o
+     * jogo tentaria carregar.
+     */
+    async baixarArquivo(pasta, arquivo, aoPedaco) {
+        const destino = path.join(pasta, arquivo.path);
+        const temporario = `${destino}.parte`;
+
+        fs.mkdirSync(path.dirname(destino), { recursive: true });
+
+        const resposta = await fetch(arquivo.url);
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+
+        const saida = fs.createWriteStream(temporario);
+        const leitor = resposta.body.getReader();
+
+        try {
+            while (true) {
+                const { done, value } = await leitor.read();
+                if (done) break;
+
+                // Respeita a contrapressão: sem isto, um download rápido enche
+                // a memória enquanto o disco não dá conta.
+                if (!saida.write(Buffer.from(value))) {
+                    await new Promise(resolve => saida.once('drain', resolve));
+                }
+                if (aoPedaco) aoPedaco(value.length);
+            }
+        } finally {
+            await new Promise(resolve => saida.end(resolve));
+        }
+
+        const tamanho = fs.statSync(temporario).size;
+        if (arquivo.size && tamanho !== arquivo.size) {
+            fs.rmSync(temporario, { force: true });
+            throw new Error(`veio ${tamanho} bytes, esperava ${arquivo.size}`);
+        }
+
+        fs.rmSync(destino, { force: true });
+        fs.renameSync(temporario, destino);
+    }
+
+    /* ------------------------------------------------- cache de hashes --- */
+
+    hashCacheFile(pasta) {
+        return path.join(pasta, '.atena-hashes.json');
+    }
+
+    readHashCache(pasta) {
+        try {
+            return JSON.parse(fs.readFileSync(this.hashCacheFile(pasta), 'utf8'));
+        } catch {
+            return {};
+        }
+    }
+
+    writeHashCache(pasta, dados) {
+        try {
+            fs.mkdirSync(pasta, { recursive: true });
+            fs.writeFileSync(this.hashCacheFile(pasta), JSON.stringify(dados), 'utf8');
+        } catch (err) {
+            console.error('[modpack] não consegui guardar o cache de hashes:', err.message);
+        }
+    }
+
     /* -------------------------------------------- verificar e reparar ---- */
 
     /**

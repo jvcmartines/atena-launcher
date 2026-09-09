@@ -225,5 +225,7 @@
     "error.start_title": "Não consegui começar",
     "error.start_text": "O jogo não iniciou. Os detalhes completos estão no log:",
     "home.preparing": "Conferindo os seus arquivos…",
-    "home.preparing_hint": "A primeira conferência de um modpack grande pode levar alguns minutos."
+    "home.preparing_hint": "A primeira conferência de um modpack grande pode levar alguns minutos.",
+    "home.sync_done": "Modpack em dia. {count} arquivo(s) baixado(s) — aperte Jogar quando quiser.",
+    "home.sync_partial": "{count} arquivo(s) não vieram. Aperte Atualizar de novo para tentar só eles."
 }

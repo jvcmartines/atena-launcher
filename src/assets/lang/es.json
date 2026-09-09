@@ -225,5 +225,7 @@
     "error.start_title": "No pude empezar",
     "error.start_text": "El juego no arrancó. Los detalles completos están en el registro:",
     "home.preparing": "Comprobando tus archivos…",
-    "home.preparing_hint": "La primera comprobación de un modpack grande puede tardar unos minutos."
+    "home.preparing_hint": "La primera comprobación de un modpack grande puede tardar unos minutos.",
+    "home.sync_done": "Modpack al día. {count} archivo(s) descargado(s) — pulsa Jugar cuando quieras.",
+    "home.sync_partial": "{count} archivo(s) no llegaron. Pulsa Actualizar otra vez para reintentar solo esos."
 }

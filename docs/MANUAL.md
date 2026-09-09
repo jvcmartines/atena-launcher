@@ -367,14 +367,34 @@ precisa:
 | **Atualizar** | Está instalado, mas você publicou uma versão mais nova |
 | **Jogar** | Está igual ao que você publicou |
 
-Em todos os casos é o mesmo clique: o launcher baixa o que falta, mostra o
-progresso e abre o jogo no fim. O jogador não escolhe entre instalar e
-atualizar — o launcher já sabe qual é o caso.
+O jogador não escolhe entre instalar e atualizar — o launcher já sabe qual é o
+caso.
 
-Como ele sabe: depois de cada sincronização o launcher grava
-`.atena-version.json` dentro da pasta do modpack, com a versão que ficou
-instalada ali. Na próxima abertura ele compara esse número com o de
+**Baixar e jogar são dois cliques separados.** Em **Instalar** ou **Atualizar**,
+o launcher sincroniza o modpack e para por aí: mostra quantos arquivos vieram e
+o botão passa a ser **Jogar**. Quem só queria deixar o modpack em dia antes de
+sair não fica com o Minecraft aberto na cara.
+
+Como ele sabe o que está instalado: depois de cada sincronização o launcher
+grava `.atena-version.json` dentro da pasta do modpack, com a versão que ficou
+ali. Na próxima abertura ele compara esse número com o de
 `/api/instances/:id/version`.
+
+### Por que a atualização é rápida da segunda vez
+
+O launcher confere o SHA-1 de cada arquivo antes de decidir o que baixar. Num
+modpack de 5 mil arquivos isso levaria minutos toda vez, então o resultado fica
+guardado em `.atena-hashes.json`, indexado por tamanho e data de modificação. Da
+segunda vez em diante a conferência é quase instantânea; só o que mudou no disco
+é lido de novo.
+
+Os dois arquivos entram automaticamente na lista de ignorados, senão o modo
+estrito os apagaria — e sem eles o launcher esqueceria tudo e reconferiria do
+zero a cada abertura.
+
+Se um download falhar no meio, o arquivo fica com a extensão `.parte` e é
+descartado: o que não pode acontecer é um `.jar` pela metade, que o jogo tentaria
+carregar. Basta apertar **Atualizar** de novo — só o que faltou é rebaixado.
 
 ### O menu do modpack
 

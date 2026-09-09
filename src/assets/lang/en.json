@@ -225,5 +225,7 @@
     "error.start_title": "Couldn't start",
     "error.start_text": "The game did not start. The full details are in the log:",
     "home.preparing": "Checking your files…",
-    "home.preparing_hint": "The first check on a big modpack can take a few minutes."
+    "home.preparing_hint": "The first check on a big modpack can take a few minutes.",
+    "home.sync_done": "Modpack up to date. {count} file(s) downloaded — press Play when you are ready.",
+    "home.sync_partial": "{count} file(s) failed to download. Press Update again to retry just those."
 }

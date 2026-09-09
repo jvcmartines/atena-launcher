@@ -187,11 +187,19 @@ class Home {
             instancePopup.style.display = 'flex'
         })
 
-        // O catch aqui não é decoração: sem ele, qualquer erro antes da tela
-        // mudar deixava o botão vivo e nada acontecia — a pessoa clicava,
-        // clicava, e concluía que travou.
+        // Baixar e jogar são dois passos separados de propósito: quem clicou em
+        // Atualizar quer o modpack em dia, não o Minecraft abrindo na cara.
+        // Terminada a atualização, o botão vira Jogar e a pessoa decide.
+        //
+        // O catch não é decoração: sem ele, qualquer erro antes da tela mudar
+        // deixava o botão vivo e nada acontecia — a pessoa clicava, clicava, e
+        // concluía que travou.
         playBTN.addEventListener('click', () => {
-            this.startGame().catch(err => this.falhouAoIniciar(err))
+            let acao = this.packState === 'install' || this.packState === 'update'
+                ? this.updatePack()
+                : this.startGame()
+
+            acao.catch(err => this.falhouAoIniciar(err))
         })
         instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
     }
@@ -664,6 +672,143 @@ class Home {
         return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
     }
 
+    /* ------------------------------------------- instalar / atualizar ---- */
+
+    /**
+     * Baixa o modpack e para por aí. Não abre o jogo.
+     *
+     * A conferência dos arquivos já existentes é a parte lenta — 5 mil
+     * arquivos, 1,66 GB — e é justamente onde a biblioteca fica muda. Aqui ela
+     * mostra progresso desde o primeiro segundo.
+     */
+    async updatePack() {
+        let instance = await this.currentInstance()
+        if (!instance) return
+
+        let base = await this.basePath()
+        let configClient = await this.db.readData('configClient')
+
+        let playInstanceBTN = document.querySelector('.play-instance')
+        let infoBox = document.querySelector('.info-starting-game')
+        let infoText = document.querySelector('.info-starting-game-text')
+        let progressBar = document.querySelector('.progress-bar')
+        let speedElement = document.querySelector('.download-speed')
+        let etaElement = document.querySelector('.download-eta')
+
+        playInstanceBTN.style.display = 'none'
+        infoBox.style.display = 'block'
+        progressBar.style.display = ''
+        progressBar.value = 0
+        ipcRenderer.send('main-window-progress-load')
+
+        // Antes de mexer nos arquivos, guarda uma cópia das pastas do jogador.
+        // Na primeira instalação não há nada para guardar.
+        if (instance.backup?.length && this.packState !== 'install') {
+            infoText.innerHTML = lang.t('home.backup')
+            try {
+                await backup.run(base, instance.name, instance.backup)
+            } catch (err) {
+                console.error('[backup] falhou, seguindo mesmo assim:', err)
+            }
+        }
+
+        let userProtected = configClient?.launcher_config?.protected || []
+        let protegidos = await modpack.expandProtected(instance.url, userProtected)
+
+        // A versão que estava aqui antes: é a partir dela que o changelog
+        // conta o que a pessoa perdeu.
+        let versaoAnterior = modpack.readLocal(base, instance.name)?.version ?? null
+
+        let ultimoBytes = 0
+        let ultimoInstante = inicio
+
+        try {
+            let resultado = await modpack.sync(base, instance, {
+                ignored: protegidos,
+                concorrencia: configClient?.launcher_config?.download_multi || 5,
+                aoProgresso: dados => {
+                    if (dados.fase === 'conferindo') {
+                        let porcento = ((dados.feitos / dados.total) * 100).toFixed(0)
+                        infoText.innerHTML = lang.t('home.checking', { percent: porcento })
+                        progressBar.value = dados.feitos
+                        progressBar.max = dados.total
+                        ipcRenderer.send('main-window-progress', { progress: dados.feitos, size: dados.total })
+                        return
+                    }
+
+                    infoText.innerHTML = lang.t('home.downloading_what', {
+                        percent: dados.bytesTotais ? ((dados.bytes / dados.bytesTotais) * 100).toFixed(0) : '0',
+                        what: this.nomeDoQue(String(dados.arquivo || '').split('/')[0])
+                    })
+                    progressBar.value = dados.bytes
+                    progressBar.max = dados.bytesTotais || 1
+                    ipcRenderer.send('main-window-progress', { progress: dados.bytes, size: dados.bytesTotais || 1 })
+
+                    // Velocidade e tempo restante a partir do que já veio.
+                    let agora = Date.now()
+                    if (agora - ultimoInstante > 700) {
+                        let velocidade = (dados.bytes - ultimoBytes) / ((agora - ultimoInstante) / 1000)
+                        ultimoBytes = dados.bytes
+                        ultimoInstante = agora
+
+                        if (speedElement) speedElement.textContent = `${(velocidade / 131072).toFixed(1)} Mb/s`
+                        if (etaElement && velocidade > 0) {
+                            let faltam = Math.max(0, (dados.bytesTotais - dados.bytes) / velocidade)
+                            etaElement.textContent = lang.t('home.eta', { time: this.tempoCurto(faltam) })
+                        }
+                    }
+                }
+            })
+
+            // Só agora o modpack está em dia: anota a versão.
+            let remote = await modpack.remoteVersion(instance.url)
+            if (remote) {
+                modpack.writeLocal(base, instance.name, {
+                    version: remote.version,
+                    publishedAt: remote.publishedAt,
+                    syncedAt: new Date().toISOString()
+                })
+            }
+
+            let anterior = this.packState
+            await this.refreshState(instance)
+
+            if (resultado.falhas?.length) {
+                new popup().openPopup({
+                    title: lang.t('common.error'),
+                    content: lang.t('home.sync_partial', { count: resultado.falhas.length }),
+                    color: 'red',
+                    options: true
+                })
+            } else {
+                new popup().openPopup({
+                    title: lang.t(anterior === 'install' ? 'home.install' : 'home.update'),
+                    content: lang.t('home.sync_done', { count: resultado.baixados }),
+                    color: 'var(--success)',
+                    options: true
+                })
+            }
+
+            // Atualizou de verdade? Conta o que mudou.
+            if (anterior === 'update' && versaoAnterior !== null) await this.showChangelog(instance, versaoAnterior)
+        } finally {
+            infoBox.style.display = 'none'
+            playInstanceBTN.style.display = 'flex'
+            progressBar.value = 0
+            if (speedElement) speedElement.textContent = ''
+            if (etaElement) etaElement.textContent = ''
+            ipcRenderer.send('main-window-progress-reset')
+        }
+    }
+
+    /** "3m 20s" a partir de segundos. */
+    tempoCurto(segundos) {
+        let h = Math.floor(segundos / 3600)
+        let m = Math.floor((segundos - h * 3600) / 60)
+        let s = Math.floor(segundos - h * 3600 - m * 60)
+        return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`
+    }
+
     /**
      * Alguma coisa quebrou antes ou durante o começo do jogo.
      *
@@ -711,7 +856,15 @@ class Home {
         // compara caminho a caminho, então "config" sozinho não protegeria os
         // arquivos de dentro de serem sobrescritos.
         let userProtected = configClient?.launcher_config?.protected || []
-        let ignored = [...(options.ignored || []), ...await modpack.expandProtected(options.url, userProtected)]
+        let ignored = [
+            ...(options.ignored || []),
+            // Os arquivos de controle do launcher não fazem parte do modpack,
+            // então o modo estrito os apagaria — e sem eles o launcher esquece
+            // qual versão está instalada e reconfere tudo do zero.
+            '.atena-version.json',
+            '.atena-hashes.json',
+            ...await modpack.expandProtected(options.url, userProtected)
+        ]
 
         let opt = {
             url: options.url,
@@ -840,16 +993,12 @@ class Home {
             if (!this.marked) {
                 this.marked = true
 
-                // Guarda a versão que estava instalada ANTES, para saber o que
-                // mostrar de novidade quando o jogo fechar.
-                let anterior = modpack.readLocal(base, options.name)
+                // O modpack agora é sincronizado no botão Atualizar, não aqui.
+                // Ainda assim vale reanotar a versão: o jogo abriu, então o
+                // que está em disco é o que o servidor publicou.
                 let remote = await modpack.remoteVersion(options.url)
 
                 if (remote) {
-                    if (state === 'update' && anterior?.version && anterior.version !== remote.version) {
-                        this.novidadesDesde = { instance: options, version: anterior.version }
-                    }
-
                     modpack.writeLocal(base, options.name, {
                         version: remote.version,
                         publishedAt: remote.publishedAt,
@@ -893,13 +1042,6 @@ class Home {
                 detalhes: lang.t('presence.in_launcher'),
                 convite: 'https://discord.gg/92cDk8rZKK'
             })
-
-            // Atualizou nesta sessão? Conta o que mudou, agora que dá para ler.
-            if (this.novidadesDesde) {
-                let { instance, version } = this.novidadesDesde
-                this.novidadesDesde = null
-                this.showChangelog(instance, version)
-            }
 
             console.log('Close');
         });
