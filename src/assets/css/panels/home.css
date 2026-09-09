@@ -639,3 +639,33 @@
         display: none;
     }
 }
+
+/* --------------------------------------------------------- bloqueado --- */
+
+.blocked-box {
+    display: none;
+    width: min(420px, 84vw);
+    margin-top: 30px;
+    padding: 22px 26px;
+    text-align: center;
+    border-radius: 16px;
+    border-color: rgba(255, 107, 107, 0.35);
+    animation: rise 0.7s 0.12s var(--ease) backwards;
+}
+
+.blocked-box.visible {
+    display: block;
+}
+
+.blocked-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--danger);
+}
+
+.blocked-text {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-dim);
+}

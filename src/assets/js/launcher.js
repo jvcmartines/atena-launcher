@@ -40,7 +40,20 @@ class Launcher {
         discord.configure(config.getApiUrl(), token);
 
         this.config = await config.GetConfig().then(res => res).catch(err => err);
-        if (await this.config.error) return this.errorConnect()
+
+        if (await this.config.error) {
+            // Banimento nao e falha de conexao: o launcher abre normalmente e
+            // mostra o motivo por dentro, com o botao de jogar desativado.
+            if (this.config.error.banned) {
+                this.config = {
+                    dataDirectory: 'Atena',
+                    online: false,
+                    banned: { message: this.config.error.message }
+                };
+            } else {
+                return this.errorConnect()
+            }
+        }
 
         this.createPanels(Login, Home, Settings);
         this.startLauncher();
@@ -152,6 +165,8 @@ class Launcher {
     }
 
     async startLauncher() {
+        if (this.config.banned) return changePanel('home');
+
         if (this.config.discord?.required && !this.config.discord?.linked) {
             return changePanel('login');
         }

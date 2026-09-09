@@ -20,6 +20,16 @@ class Home {
         this.db = new database();
         this.socialLick()
         this.copyServerIp()
+
+        // Banido: nem tenta montar a lista de modpacks — o servidor nao vai
+        // devolver nenhum, e a pessoa precisa e de saber o motivo.
+        if (this.config.banned) {
+            this.blockPlay(lang.t('blocked.banned_title'), this.config.banned.message || lang.t('blocked.banned_text'))
+            this.showStoredAccount()
+            document.querySelector('.settings-btn').addEventListener('click', () => changePanel('settings'))
+            return
+        }
+
         this.instancesSelect()
         this.reportNickname()
         this.playersPopup()
@@ -91,11 +101,19 @@ class Home {
         let instancesListPopup = document.querySelector('.instances-List')
         let instanceCloseBTN = document.querySelector('.close-popup')
 
+        // Sem nenhum modpack visivel nao ha o que jogar. Acontece quando a
+        // staff restringe tudo por cargo, ou desativa o unico modpack.
+        if (!instancesList.length) {
+            return this.blockPlay(lang.t('blocked.no_pack_title'), lang.t('blocked.no_pack_text'))
+        }
+
         // Com um modpack só não há o que escolher: a lista some do popup.
         if (instancesList.length <= 1) instancesListPopup.style.display = 'none'
 
         if (!instanceSelect) {
-            let newInstanceSelect = instancesList.find(i => i.whitelistActive == false)
+            // Prefere um aberto; se todos tem whitelist, fica com o primeiro
+            // que o servidor liberou para esta pessoa.
+            let newInstanceSelect = instancesList.find(i => i.whitelistActive == false) || instancesList[0]
             let configClient = await this.db.readData('configClient')
             configClient.instance_select = newInstanceSelect.name
             instanceSelect = newInstanceSelect.name
@@ -227,6 +245,47 @@ class Home {
         popupBox.addEventListener('click', e => {
             if (e.target === popupBox) popupBox.style.display = 'none'
         })
+    }
+
+    /**
+     * Preenche o rodape com a conta salva, sem passar pela renovacao de token.
+     * No estado bloqueado o fluxo normal de login nao roda, e sem isto o rodape
+     * fica em Loading... para sempre.
+     */
+    async showStoredAccount() {
+        let configClient = await this.db.readData('configClient')
+        let account = await this.db.readData('accounts', configClient?.account_selected)
+
+        let nameElement = document.querySelector('.player-name')
+        let typeElement = document.querySelector('.player-type')
+
+        if (!account) {
+            document.querySelector('.account-chip')?.style.setProperty('display', 'none')
+            return
+        }
+        if (nameElement) nameElement.textContent = account.name
+        if (typeElement) typeElement.textContent = configClient?.discord?.player?.username || ''
+    }
+
+    /**
+     * Trava o launcher com um motivo na tela, em vez de fechar na cara da
+     * pessoa. O botao de jogar sai, o card de jogadores sai, e fica so o aviso
+     * — mas as configuracoes continuam acessiveis, para ela poder trocar de
+     * conta ou de idioma.
+     */
+    blockPlay(title, message) {
+        let box = document.querySelector('.blocked-box')
+        let play = document.querySelector('.play-elements')
+        let players = document.querySelector('.status-player-count')
+
+        if (play) play.style.display = 'none'
+        if (players) players.style.display = 'none'
+
+        if (box) {
+            box.querySelector('.blocked-title').textContent = title
+            box.querySelector('.blocked-text').innerHTML = message
+            box.classList.add('visible')
+        }
     }
 
     /** Instância selecionada no momento. */
