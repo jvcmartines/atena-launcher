@@ -536,6 +536,105 @@
         });
     }
 
+    /* -------------------------------------------- importar de um link --- */
+
+    $('#import-url').addEventListener('click', () => {
+        openModal(`
+            <h3>Importar de um link</h3>
+            <p class="hint">
+                Cole o link direto do <code>.zip</code>. O servidor baixa sozinho — em release do GitHub,
+                use o link do arquivo (o que termina em <code>.zip</code>), não o da página.
+            </p>
+            <label class="field">
+                <span>Link do arquivo</span>
+                <input type="url" id="url-input" placeholder="https://github.com/usuario/repo/releases/download/v1/modpack.zip">
+            </label>
+            <label class="field">
+                <span>Pastas a ignorar no começo do caminho</span>
+                <select id="url-strip">
+                    <option value="0">Nenhuma — o zip já começa em mods/, config/…</option>
+                    <option value="1">1 — o zip tem uma pasta envolvendo tudo (ex.: .minecraft/)</option>
+                    <option value="2">2 — o zip tem duas pastas antes do conteúdo</option>
+                </select>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" id="url-wipe">
+                <span>Apagar tudo antes de extrair
+                    <small>Use quando o zip é o modpack completo. Sem marcar, os arquivos são somados aos que
+                        já existem.</small></span>
+            </label>
+            <div class="row end">
+                <button type="button" data-close>Cancelar</button>
+                <button class="primary" id="url-send">Importar</button>
+            </div>
+        `);
+
+        $('#url-send').addEventListener('click', async () => {
+            const url = $('#url-input').value.trim();
+            if (!url) return toast('Cole o link do arquivo.', 'error');
+
+            const body = {
+                url,
+                strip: Number($('#url-strip').value),
+                wipe: $('#url-wipe').checked,
+                destination: state.path
+            };
+            closeModal();
+
+            try {
+                await api('POST', `/instances/${state.current}/import-url`, body);
+                await followImport();
+            } catch (err) { toast(err.message, 'error'); }
+        });
+    });
+
+    /**
+     * Acompanha a importação até acabar. O download e a extração acontecem no
+     * servidor, então aqui só perguntamos o andamento de segundo em segundo e
+     * reaproveitamos a mesma barra dos uploads.
+     */
+    async function followImport() {
+        const box = $('#upload-progress');
+        const label = $('#upload-label');
+        const bar = $('#upload-bar');
+
+        box.hidden = false;
+        label.textContent = 'Baixando…';
+        bar.value = 0;
+
+        try {
+            while (true) {
+                await new Promise(r => setTimeout(r, 1000));
+                const job = await api('GET', `/instances/${state.current}/import-url`);
+
+                if (job.state === 'error') throw new Error(job.error || 'A importação falhou.');
+
+                if (job.state === 'done') {
+                    toast(`${job.extracted} arquivo(s) extraído(s). Não esqueça de publicar.`, 'success');
+                    break;
+                }
+
+                if (job.step === 'extraindo') {
+                    label.textContent = `Extraindo ${fmtSize(job.received)}…`;
+                    bar.removeAttribute('value');   // indeterminada: a extração não reporta progresso
+                } else if (job.total) {
+                    label.textContent = `Baixando ${fmtSize(job.received)} de ${fmtSize(job.total)}`;
+                    bar.value = (job.received / job.total) * 100;
+                } else {
+                    label.textContent = `Baixando ${fmtSize(job.received)}…`;
+                    bar.removeAttribute('value');
+                }
+            }
+        } catch (err) {
+            toast(err.message, 'error');
+        } finally {
+            box.hidden = true;
+            bar.value = 0;
+            await loadFiles();
+            await loadInstances();
+        }
+    }
+
     // Arrastar e soltar, inclusive pastas inteiras.
     const dropzone = $('#dropzone');
     ['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, e => {

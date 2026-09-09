@@ -165,10 +165,43 @@ async function publish(instanceId, { author, changelog, onProgress } = {}) {
         };
 
         writeManifest(instanceId, manifest);
+        if (changed) recordHistory(instanceId, manifest);
         return { manifest, changed };
     } finally {
         running.delete(instanceId);
     }
+}
+
+/**
+ * Guarda o changelog de cada versão publicada.
+ *
+ * O manifesto só carrega o texto da versão atual, então quem ficou três
+ * versões para trás não teria como ver o que perdeu. O histórico vive à parte
+ * porque é pequeno e é lido a cada abertura do launcher — não faz sentido
+ * carregar um manifesto de 5 mil arquivos para ler um parágrafo.
+ */
+function recordHistory(instanceId, manifest) {
+    const all = store.read('changelogs', {});
+    const entries = all[instanceId] || [];
+
+    // Republicar a mesma versão sobrescreve a entrada em vez de duplicar.
+    const without = entries.filter(entry => entry.version !== manifest.version);
+
+    all[instanceId] = [{
+        version: manifest.version,
+        publishedAt: manifest.publishedAt,
+        publishedBy: manifest.publishedBy,
+        changelog: manifest.changelog || '',
+        fileCount: manifest.fileCount,
+        totalSize: manifest.totalSize
+    }, ...without].slice(0, 50);
+
+    store.write('changelogs', all);
+}
+
+/** Histórico publicado, da versão mais nova para a mais antiga. */
+function history(instanceId) {
+    return store.read('changelogs', {})[instanceId] || [];
 }
 
 function signatureOf(files) {
@@ -219,5 +252,6 @@ module.exports = {
     deleteManifest,
     pendingChanges,
     diskStats,
+    history,
     walk
 };

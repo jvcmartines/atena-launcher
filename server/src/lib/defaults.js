@@ -75,10 +75,10 @@ const DEFAULT_IGNORED = [
  *
  * Não precisa repetir o que já está em DEFAULT_IGNORED: aquilo nunca é apagado.
  * Esta lista é a rede de segurança para conteúdo do jogador que vive dentro de
- * pastas sincronizadas — por exemplo uma pasta `emojis` que o modpack usa.
+ * pastas sincronizadas — no Atena é a `emotes`, do mod de emotes.
  */
 const DEFAULT_BACKUP = [
-    'emojis',
+    'emotes',
     'config'
 ];
 

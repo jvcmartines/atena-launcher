@@ -15,6 +15,7 @@ const store = require('../lib/store');
 const auth = require('../lib/auth');
 const manifest = require('../lib/manifest');
 const filestore = require('../lib/filestore');
+const fetchurl = require('../lib/fetchurl');
 const players = require('../lib/players');
 const { slugify, normalizeRelative, safeFolderName } = require('../lib/paths');
 const { DEFAULT_CONFIG, defaultInstance } = require('../lib/defaults');
@@ -363,6 +364,107 @@ router.post('/instances/:id/upload-zip', upload.single('archive'), wrap(async (r
     } finally {
         await fsp.rm(req.file.path, { force: true }).catch(() => {});
     }
+}));
+
+/* ------------------------------------------------------ importar por URL -- */
+
+/**
+ * Publica o modpack a partir de um link em vez de um upload.
+ *
+ * O caminho do navegador — 1,6 GB saindo da internet de casa, atravessando o
+ * nginx e o multer — é lento e frágil (foi o que estourou em 502). Aqui o
+ * arquivo vai do GitHub direto para a VPS, e o navegador só acompanha.
+ *
+ * Roda como job pelo mesmo motivo da publicação: baixar e extrair demora mais
+ * do que uma requisição HTTP aguenta esperar.
+ */
+const imports = new Map();
+
+router.post('/instances/:id/import-url', express.json(), wrap(async (req, res) => {
+    const instance = findInstance(req.params.id);
+    const running = imports.get(instance.id);
+
+    if (running && running.state === 'running') {
+        return res.status(409).json({ error: 'Já existe uma importação em andamento para este modpack.' });
+    }
+
+    const url = String(req.body?.url || '').trim();
+    if (!url) return fail(res, 400, 'Cole o link do arquivo .zip.');
+
+    // Falha cedo em URL inválida ou endereço interno: assim o painel mostra o
+    // erro na hora, em vez de abrir um job que morre no primeiro passo.
+    try {
+        await fetchurl.prepare(url);
+    } catch (err) {
+        return fail(res, err.status || 400, err.message);
+    }
+
+    const strip = Number(req.body?.strip || 0) || 0;
+    const wipe = req.body?.wipe === true || String(req.body?.wipe) === 'true';
+    const destination = normalizeRelative(req.body?.destination || req.body?.path || '');
+
+    const job = {
+        state: 'running',
+        step: 'baixando',
+        received: 0,
+        total: 0,
+        extracted: 0,
+        result: null,
+        error: null,
+        startedAt: Date.now()
+    };
+    imports.set(instance.id, job);
+
+    // Responde já; o trabalho continua em segundo plano.
+    res.status(202).json({ state: 'running' });
+
+    runImport(req, instance, job, { url, strip, wipe, destination }).catch(err => {
+        job.state = 'error';
+        job.error = err.message;
+        console.error('[import-url]', err);
+    });
+}));
+
+async function runImport(req, instance, job, { url, strip, wipe, destination }) {
+    let downloaded = null;
+
+    try {
+        downloaded = await fetchurl.download(url, {
+            onProgress: (received, total) => { job.received = received; job.total = total; }
+        });
+
+        job.step = 'extraindo';
+        job.received = downloaded.size;
+        job.total = downloaded.size;
+
+        if (wipe) {
+            const dir = manifest.instanceDir(instance.id);
+            for (const entry of await fsp.readdir(dir)) {
+                await fsp.rm(path.join(dir, entry), { recursive: true, force: true });
+            }
+            logAction(req, 'files.wipe', instance.id);
+        }
+
+        const result = await filestore.extractZip(instance.id, downloaded.path, { destination, strip });
+
+        job.state = 'done';
+        job.step = 'pronto';
+        job.extracted = result.extracted;
+        job.result = { ...result, size: downloaded.size, url: downloaded.url };
+
+        logAction(req, 'files.import-url',
+            `${instance.id}: ${result.extracted} arquivo(s) de ${url}${wipe ? ' (substituiu tudo)' : ''}`);
+    } finally {
+        if (downloaded) await fsp.rm(downloaded.path, { force: true }).catch(() => {});
+    }
+}
+
+router.get('/instances/:id/import-url', wrap(async (req, res) => {
+    const instance = findInstance(req.params.id);
+    const job = imports.get(instance.id);
+
+    if (!job) return res.json({ state: 'idle' });
+    res.json(job);
 }));
 
 /** Analisa o zip antes de extrair, para sugerir quantas pastas remover. */

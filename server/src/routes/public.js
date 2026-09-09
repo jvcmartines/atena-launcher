@@ -19,9 +19,10 @@ const manifest = require('../lib/manifest');
 const discord = require('../lib/discord');
 const players = require('../lib/players');
 const mcstatus = require('../lib/mcstatus');
+const signed = require('../lib/signed');
 const { DEFAULT_CONFIG, toLauncherInstance } = require('../lib/defaults');
 const { encodePath } = require('../lib/paths');
-const { PUBLIC_URL, FILES_DIR } = require('../config');
+const { PUBLIC_URL, FILES_DIR, SIGNED_URLS } = require('../config');
 
 const router = express.Router();
 
@@ -115,13 +116,44 @@ router.get('/api/instances/:id/files', blockBanned, (req, res) => {
         return res.json([]);
     }
 
+    // Cada link vai assinado e com prazo: só quem passou pelo filtro de acesso
+    // acima consegue um link que abre. Repassar o manifesto adiante deixa de
+    // ser um jeito de contornar o controle por cargo, porque o link vence.
     const base = `${PUBLIC_URL}/files/${encodeURIComponent(instance.id)}`;
-    res.json(published.files.map(file => ({
-        path: file.path,
-        url: `${base}/${encodePath(file.path)}`,
-        size: file.size,
-        hash: file.hash
-    })));
+    const prefix = `/files/${instance.id}`;
+
+    res.json(published.files.map(file => {
+        const url = `${base}/${encodePath(file.path)}`;
+        return {
+            path: file.path,
+            // A assinatura é feita sobre o caminho DECODIFICADO, que é o que o
+            // nginx enxerga em $uri quando confere.
+            url: SIGNED_URLS ? `${url}?${signed.queryFor(`${prefix}/${file.path}`)}` : url,
+            size: file.size,
+            hash: file.hash
+        };
+    }));
+});
+
+/**
+ * Histórico de versões publicadas.
+ *
+ * Com ?since=N devolve só o que saiu depois da versão N — é assim que o
+ * launcher mostra "o que mudou desde a sua última atualização" para quem
+ * ficou várias versões para trás.
+ */
+router.get('/api/instances/:id/changelog', blockBanned, (req, res) => {
+    const instances = store.read('instances', []);
+    const instance = instances.find(i => i.id === req.params.id);
+
+    if (!instance || instance.enabled === false || !players.canAccess(instance, req.player)) {
+        return res.status(404).json({ error: 'Modpack não encontrado.' });
+    }
+
+    const since = Number(req.query.since);
+    const entries = manifest.history(instance.id);
+
+    res.json(Number.isFinite(since) ? entries.filter(entry => entry.version > since) : entries);
 });
 
 /**
@@ -329,9 +361,40 @@ router.post('/api/players/heartbeat', (req, res) => {
 
 /* -------------------------------------------------------------- files -- */
 
-// Arquivos do modpack. Servidos direto: o manifesto (que é filtrado) já diz
-// quais existem, e os nomes carregam o hash do conteúdo na prática.
-router.use('/files', express.static(FILES_DIR, {
+/**
+ * Confere a assinatura antes de entregar o arquivo.
+ *
+ * Em produção o nginx faz esta mesma conta e nem chega aqui — serve o arquivo
+ * estático direto, que é o que aguenta um download de 1,6 GB sem ocupar o
+ * Node. Este middleware é a rede de segurança para quando o nginx não está na
+ * frente: em desenvolvimento, ou se alguém alcançar a porta do Node.
+ */
+function requireSignature(req, res, next) {
+    if (!SIGNED_URLS) return next();
+
+    // req.path chega escapado; a assinatura é sobre o caminho decodificado,
+    // igual ao $uri do nginx.
+    let decoded;
+    try {
+        decoded = decodeURIComponent(req.path);
+    } catch {
+        return res.status(400).type('text/plain').send('Caminho inválido.');
+    }
+
+    const result = signed.check(`/files${decoded}`, req.query.md5, req.query.expires);
+
+    if (result === 'expirado') {
+        return res.status(410).type('text/plain').send('Este link expirou. Abra o launcher de novo.');
+    }
+    if (result !== 'ok') {
+        return res.status(403).type('text/plain').send('Link inválido.');
+    }
+    next();
+}
+
+// Arquivos do modpack. O manifesto (que é filtrado por cargo) é quem entrega
+// os links assinados; sem assinatura válida não passa daqui.
+router.use('/files', requireSignature, express.static(FILES_DIR, {
     dotfiles: 'allow',
     etag: true,
     maxAge: '5m',

@@ -25,12 +25,25 @@ const TMP_DIR = resolveDir(process.env.ATENA_TMP_DIR, 'tmp');
  * um restart do processo em vez de cair a cada deploy.
  */
 function sessionSecret() {
-    if (process.env.ATENA_SESSION_SECRET) return process.env.ATENA_SESSION_SECRET;
+    return persistentSecret('ATENA_SESSION_SECRET', 'session.key', 48);
+}
 
-    const keyFile = path.join(DATA_DIR, 'session.key');
+/**
+ * Segredo que assina os links de download. Precisa ser o MESMO configurado no
+ * secure_link_md5 do nginx — por isso ele fica num arquivo legível, e não é
+ * gerado de novo a cada restart.
+ */
+function filesSecret() {
+    return persistentSecret('ATENA_FILES_SECRET', 'files.key', 32);
+}
+
+function persistentSecret(envName, fileName, bytes) {
+    if (process.env[envName]) return process.env[envName];
+
+    const keyFile = path.join(DATA_DIR, fileName);
     if (fs.existsSync(keyFile)) return fs.readFileSync(keyFile, 'utf8').trim();
 
-    const secret = crypto.randomBytes(48).toString('hex');
+    const secret = crypto.randomBytes(bytes).toString('hex');
     fs.writeFileSync(keyFile, secret, { mode: 0o600 });
     return secret;
 }
@@ -51,6 +64,17 @@ module.exports = {
 
     SESSION_SECRET: sessionSecret(),
     SESSION_TTL_HOURS: Number(process.env.ATENA_SESSION_TTL_HOURS || 12),
+
+    // Assinatura dos links de download do modpack.
+    FILES_SECRET: filesSecret(),
+
+    // Quanto tempo um link do manifesto continua valendo. Precisa cobrir um
+    // download inteiro numa internet ruim: 1,6 GB a 1 Mb/s passa das 3 horas.
+    SIGNED_URL_TTL_HOURS: Number(process.env.ATENA_SIGNED_URL_TTL_HOURS || 12),
+
+    // false desliga a assinatura e volta a servir /files/ para qualquer um.
+    // Só existe para destravar um deploy quebrado; não deixe assim.
+    SIGNED_URLS: String(process.env.ATENA_SIGNED_URLS || 'true') !== 'false',
 
     // true quando o painel está atrás de HTTPS (nginx com certificado).
     SECURE_COOKIES: String(process.env.ATENA_SECURE_COOKIES || 'false') === 'true',
