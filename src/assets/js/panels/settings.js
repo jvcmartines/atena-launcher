@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord, skinChanger, skin2D, pkg } from '../utils.js'
+import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord, skinChanger, skin2D, pkg, suporte } from '../utils.js'
 const { ipcRenderer, shell } = require('electron');
 const os = require('os');
 const fs = require('fs');
@@ -25,7 +25,135 @@ class Settings {
         this.protectedFolders()
         this.discordAccount()
         this.skin()
+        this.performanceProfiles()
+        this.quickPlay()
+        this.diagnostics()
         this.showVersion()
+    }
+
+    /* ------------------------------------------- perfis de desempenho ---- */
+
+    /**
+     * Três botões que ajustam a RAM de uma vez.
+     *
+     * A conta é sempre a mesma: deixe 2 GB para o sistema, não passe de 24 (o
+     * Java não aproveita mais que isso num modpack) e nunca aloque mais da
+     * metade da máquina no perfil baixo. Quem quiser afinar continua tendo o
+     * controle deslizante acima — isto é só o atalho para quem não quer pensar.
+     */
+    async performanceProfiles() {
+        let caixa = document.querySelector('.perf-box')
+        let resultado = document.querySelector('.perf-result')
+        if (!caixa) return
+
+        let total = Math.trunc(os.totalmem() / 1073741824)
+
+        let perfis = {
+            low: { min: 4, max: Math.min(6, total - 2) },
+            mid: { min: 6, max: Math.min(10, total - 2) },
+            high: { min: 8, max: Math.min(16, total - 2) }
+        }
+
+        caixa.addEventListener('click', async e => {
+            let botao = e.target.closest('.perf-btn')
+            if (!botao) return
+
+            let perfil = perfis[botao.dataset.perf]
+
+            // Num PC pequeno o perfil "bom" não cabe: melhor dizer isso do que
+            // aplicar um valor que vai travar o jogo.
+            if (!perfil || perfil.max < perfil.min) {
+                resultado.textContent = lang.t('settings.performance_too_small')
+                return
+            }
+
+            let config = await this.db.readData('configClient')
+            config.java_config.java_memory = { min: perfil.min, max: perfil.max }
+            await this.db.updateData('configClient', config)
+
+            caixa.querySelectorAll('.perf-btn').forEach(b => b.classList.remove('active-perf'))
+            botao.classList.add('active-perf')
+
+            resultado.textContent = lang.t('settings.performance_applied', {
+                min: perfil.min,
+                max: perfil.max
+            })
+
+            // O controle deslizante precisa refletir o que acabou de mudar.
+            this.memorySlider?.setValue?.(perfil.min, perfil.max)
+            document.querySelector('.slider-touch-left span')?.setAttribute('value', `${perfil.min} GB`)
+            document.querySelector('.slider-touch-right span')?.setAttribute('value', `${perfil.max} GB`)
+        })
+    }
+
+    /* ------------------------------------------------ entrar direto ------ */
+
+    /**
+     * Com isto ligado o jogo abre já conectando no servidor, sem passar pelo
+     * menu de multijogador. O Minecraft 1.20 entende o argumento sozinho.
+     */
+    async quickPlay() {
+        let caixa = document.querySelector('.quickplay-box')
+        if (!caixa) return
+
+        let config = await this.db.readData('configClient')
+        let ligado = config?.launcher_config?.quickPlay !== false
+
+        let pintar = () => {
+            caixa.querySelectorAll('.quickplay-btn').forEach(botao => {
+                botao.classList.toggle('active-quickplay',
+                    (botao.dataset.quickplay === 'on') === ligado)
+            })
+        }
+        pintar()
+
+        caixa.addEventListener('click', async e => {
+            let botao = e.target.closest('.quickplay-btn')
+            if (!botao) return
+
+            ligado = botao.dataset.quickplay === 'on'
+            let config = await this.db.readData('configClient')
+            config.launcher_config.quickPlay = ligado
+            await this.db.updateData('configClient', config)
+            pintar()
+        })
+    }
+
+    /* --------------------------------------------------- diagnóstico ----- */
+
+    /** O retrato da máquina, para a pessoa poder ler e mandar para a staff. */
+    async diagnostics() {
+        let lista = document.querySelector('.diag-list')
+        if (!lista) return
+
+        let configClient = await this.db.readData('configClient')
+        let base = `${await appdata()}/${process.platform == 'darwin' ? this.config.dataDirectory : `.${this.config.dataDirectory}`}`
+
+        let diag = await suporte.diagnostico({
+            basePath: base,
+            instanceName: configClient?.instance_select,
+            configClient
+        })
+
+        let gb = valor => valor === null || valor === undefined ? '—' : `${valor.toFixed(1)} GB`
+
+        let linhas = [
+            [lang.t('diag.system'), diag.sistema],
+            [lang.t('diag.cpu'), `${diag.cpu} (${lang.t('diag.cores', { count: diag.nucleos })})`],
+            [lang.t('settings.ram_total'), gb(diag.ramTotalGb)],
+            [lang.t('settings.ram_free'), gb(diag.ramLivreGb)],
+            [lang.t('diag.ram_allocated'), diag.ramAlocadaGb ? `${diag.ramMinimaGb} – ${diag.ramAlocadaGb} GB` : '—'],
+            [lang.t('diag.disk_free'), gb(diag.discoLivreGb)],
+            [lang.t('diag.pack_size'), gb(diag.tamanhoPastaGb)]
+        ]
+
+        lista.innerHTML = linhas.map(([rotulo, valor]) => `
+            <div class="diag-row">
+                <span class="diag-label">${rotulo}</span>
+                <span class="diag-value">${String(valor).replace(/[<>&]/g, '')}</span>
+            </div>`).join('') +
+            diag.avisos.map(aviso =>
+                `<div class="diag-warn">${lang.t(`support.warn_${aviso}`)}</div>`).join('')
     }
 
     navBTN() {

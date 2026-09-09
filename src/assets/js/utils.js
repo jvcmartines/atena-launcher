@@ -20,6 +20,9 @@ import discord from './utils/discord.js';
 import skinChanger from './utils/skinchanger.js';
 import { skin2D } from './utils/skin.js';
 import slider from './utils/slider.js';
+import news from './utils/news.js';
+import suporte from './utils/suporte.js';
+import presenca from './utils/presenca.js';
 
 async function setBackground(theme) {
     if (typeof theme == 'undefined') {
@@ -248,5 +251,8 @@ export {
     showDiscordIdentity as showDiscordIdentity,
     getLastStatus as getLastStatus,
     serverStatus as serverStatus,
-    formatSize as formatSize
+    formatSize as formatSize,
+    news as news,
+    suporte as suporte,
+    presenca as presenca
 }

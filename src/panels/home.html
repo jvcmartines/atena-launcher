@@ -42,6 +42,12 @@
         </div>
 
         <div class="bottom-right">
+            <!-- avisos da staff; some quando não há nenhum -->
+            <div class="news-btn" data-i18n-title="news.title" hidden>
+                <div class="icon-news"></div>
+                <span class="news-dot" hidden></span>
+            </div>
+
             <!-- a contagem saiu do meio da tela: virou um ponto no rodapé, que
                  continua abrindo a lista de quem está jogando -->
             <div class="status-player-count" data-i18n-title="home.players_title">
@@ -97,10 +103,44 @@
                     <strong data-i18n="home.reinstall"></strong>
                     <small data-i18n="home.reinstall_text"></small>
                 </div>
+                <div class="pack-action" data-action="repair">
+                    <strong data-i18n="home.repair"></strong>
+                    <small data-i18n="home.repair_text"></small>
+                </div>
+                <div class="pack-action" data-action="changelog">
+                    <strong data-i18n="home.changelog"></strong>
+                    <small data-i18n="home.changelog_text"></small>
+                </div>
                 <div class="pack-action" data-action="folder">
                     <strong data-i18n="home.open_folder"></strong>
                     <small data-i18n="home.open_folder_text"></small>
                 </div>
+                <div class="pack-action" data-action="report">
+                    <strong data-i18n="support.title"></strong>
+                    <small data-i18n="support.text"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- avisos da staff -->
+    <div class="news-popup">
+        <div class="news-tab glass">
+            <div class="close-news icon-close"></div>
+            <p data-i18n="news.title"></p>
+            <div class="news-list content-scroll"></div>
+        </div>
+    </div>
+
+    <!-- o que mudou no modpack -->
+    <div class="changelog-popup">
+        <div class="changelog-tab glass">
+            <div class="close-changelog icon-close"></div>
+            <p data-i18n="home.changelog"></p>
+            <div class="changelog-intro"></div>
+            <div class="changelog-list content-scroll"></div>
+            <div class="row-end">
+                <div class="changelog-ok size-btn" data-i18n="common.ok"></div>
             </div>
         </div>
     </div>

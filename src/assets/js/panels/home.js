@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity, news, suporte, presenca } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -33,6 +33,9 @@ class Home {
         this.instancesSelect()
         this.reportNickname()
         this.playersPopup()
+        this.newsPopup()
+        this.changelogPopup()
+        this.richPresence()
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
 
@@ -247,6 +250,137 @@ class Home {
         })
     }
 
+    /* ------------------------------------------------ avisos da staff ---- */
+
+    /**
+     * Avisos escritos no painel. O botão só aparece quando existe algum, e
+     * ganha um ponto dourado enquanto houver aviso que esta pessoa ainda não
+     * abriu — o "não li" fica guardado por data do aviso mais recente.
+     */
+    async newsPopup() {
+        let botao = document.querySelector('.news-btn')
+        let caixa = document.querySelector('.news-popup')
+        if (!botao || !caixa) return
+
+        let avisos = await news.articles()
+        if (!avisos.length) return
+
+        botao.hidden = false
+
+        let maisNovo = avisos[0].publish_date || ''
+        let lido = localStorage.getItem('atena-news-lido') || ''
+        let ponto = document.querySelector('.news-dot')
+        if (ponto) ponto.hidden = maisNovo <= lido
+
+        document.querySelector('.news-list').innerHTML = avisos.map(aviso => `
+            <article class="news-item">
+                <h4>${this.escapar(aviso.title)}</h4>
+                <div class="news-meta">${this.escapar(aviso.author || '')} · ${this.dataCurta(aviso.publish_date)}</div>
+                <p>${this.escapar(aviso.content || '').replace(/\n/g, '<br>')}</p>
+            </article>`).join('')
+
+        botao.addEventListener('click', () => {
+            caixa.style.display = 'flex'
+            localStorage.setItem('atena-news-lido', maisNovo)
+            if (ponto) ponto.hidden = true
+        })
+
+        document.querySelector('.close-news').addEventListener('click', () => caixa.style.display = 'none')
+        caixa.addEventListener('click', e => { if (e.target === caixa) caixa.style.display = 'none' })
+    }
+
+    /* --------------------------------------------- o que mudou no pack --- */
+
+    changelogPopup() {
+        let caixa = document.querySelector('.changelog-popup')
+        if (!caixa) return
+
+        let fechar = () => caixa.style.display = 'none'
+        document.querySelector('.close-changelog').addEventListener('click', fechar)
+        document.querySelector('.changelog-ok').addEventListener('click', fechar)
+        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
+    }
+
+    /**
+     * Mostra as versões publicadas depois da que a pessoa tem instalada.
+     * `desde` nulo mostra o histórico inteiro (é o que o menu do modpack faz).
+     */
+    async showChangelog(instance, desde) {
+        let entradas = await news.changelog(instance.url, desde)
+        let caixa = document.querySelector('.changelog-popup')
+        let lista = document.querySelector('.changelog-list')
+        let intro = document.querySelector('.changelog-intro')
+        if (!caixa || !lista) return false
+
+        if (!entradas.length) {
+            if (desde !== null && desde !== undefined) return false   // nada novo, não incomoda
+            lista.innerHTML = `<div class="players-empty">${lang.t('home.changelog_empty')}</div>`
+            intro.textContent = ''
+            caixa.style.display = 'flex'
+            return true
+        }
+
+        intro.textContent = desde === null || desde === undefined
+            ? ''
+            : lang.t('home.changelog_since', { count: entradas.length })
+
+        lista.innerHTML = entradas.map(entrada => `
+            <article class="changelog-item">
+                <div class="changelog-version">v${entrada.version}
+                    <span class="changelog-date">${this.dataCurta(entrada.publishedAt)}</span>
+                </div>
+                <p>${entrada.changelog
+                    ? this.escapar(entrada.changelog).replace(/\n/g, '<br>')
+                    : `<span class="muted">${lang.t('home.changelog_none')}</span>`}</p>
+            </article>`).join('')
+
+        caixa.style.display = 'flex'
+        return true
+    }
+
+    escapar(texto) {
+        return String(texto).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))
+    }
+
+    dataCurta(iso) {
+        if (!iso) return ''
+        try {
+            return new Date(iso).toLocaleDateString(lang.code || 'en', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            })
+        } catch {
+            return ''
+        }
+    }
+
+    /* ----------------------------------------------- presença no discord - */
+
+    /** "Jogando Atena" no perfil de quem está com o launcher aberto. */
+    async richPresence() {
+        try {
+            let clientId = this.config?.discord?.clientId || this.config?.discordClientId
+            if (!clientId) return
+
+            if (!await presenca.conectar(clientId)) return
+
+            let atualizar = () => {
+                let status = getLastStatus()
+                presenca.definir({
+                    detalhes: lang.t('presence.in_launcher'),
+                    estado: status?.online
+                        ? lang.t('presence.players', { count: status.players.online })
+                        : lang.t('presence.offline'),
+                    convite: 'https://discord.gg/92cDk8rZKK'
+                })
+            }
+
+            atualizar()
+            this.presencaTimer = setInterval(atualizar, 60_000)
+        } catch (err) {
+            console.error('[presenca] não consegui falar com o Discord:', err.message)
+        }
+    }
+
     /**
      * Preenche o rodape com a conta salva, sem passar pela renovacao de token.
      * No estado bloqueado o fluxo normal de login nao roda, e sem isto o rodape
@@ -343,6 +477,15 @@ class Home {
             return
         }
 
+        if (action === 'changelog') {
+            document.querySelector('.instance-popup').style.display = 'none'
+            await this.showChangelog(instance, null)
+            return
+        }
+
+        if (action === 'repair') return this.repairPack(instance, base)
+        if (action === 'report') return this.reportProblem(instance, base)
+
         if (action === 'reinstall') {
             if (!confirm(lang.t('home.reinstall_confirm'))) return
 
@@ -369,6 +512,151 @@ class Home {
                 options: true
             })
         }
+    }
+
+    /**
+     * Verificar e reparar: confere o SHA-1 de cada arquivo contra o manifesto e
+     * apaga o que não bate, para o próximo Jogar baixar só isso de novo.
+     *
+     * Usa a mesma barra do download, porque conferir 5 mil arquivos leva o seu
+     * tempo e a pessoa precisa ver que está andando.
+     */
+    async repairPack(instance, base) {
+        document.querySelector('.instance-popup').style.display = 'none'
+
+        let playInstanceBTN = document.querySelector('.play-instance')
+        let infoBox = document.querySelector('.info-starting-game')
+        let infoText = document.querySelector('.info-starting-game-text')
+        let progressBar = document.querySelector('.progress-bar')
+
+        playInstanceBTN.style.display = 'none'
+        infoBox.style.display = 'block'
+        progressBar.style.display = ''
+
+        let resultado
+        try {
+            resultado = await modpack.repair(base, instance, (feitos, total) => {
+                infoText.innerHTML = lang.t('home.repairing', {
+                    percent: ((feitos / total) * 100).toFixed(0)
+                })
+                progressBar.value = feitos
+                progressBar.max = total
+            })
+        } catch (err) {
+            console.error('[modpack] a verificação falhou:', err)
+            resultado = null
+        }
+
+        infoBox.style.display = 'none'
+        playInstanceBTN.style.display = 'flex'
+        progressBar.value = 0
+
+        await this.refreshState(instance)
+
+        let quebrados = (resultado?.broken || 0) + (resultado?.missing || 0)
+        new popup().openPopup({
+            title: lang.t('home.repair'),
+            content: !resultado
+                ? lang.t('home.repair_failed')
+                : quebrados
+                    ? lang.t('home.repair_found', { count: quebrados, checked: resultado.checked })
+                    : lang.t('home.repair_clean', { checked: resultado.checked }),
+            color: quebrados ? 'var(--gold)' : 'var(--success)',
+            options: true
+        })
+    }
+
+    /**
+     * Junta log, crash-report e diagnóstico num zip e abre a pasta. É o que a
+     * staff sempre pede; assim a pessoa manda tudo de uma vez.
+     */
+    async reportProblem(instance, base) {
+        document.querySelector('.instance-popup').style.display = 'none'
+
+        let configClient = await this.db.readData('configClient')
+        let remote = await modpack.remoteVersion(instance.url)
+
+        try {
+            let diagnostico = await suporte.diagnostico({
+                basePath: base,
+                instanceName: instance.name,
+                configClient,
+                remote
+            })
+
+            let { arquivo } = await suporte.relatorio({
+                basePath: base,
+                instanceName: instance.name,
+                diagnostico,
+                versaoLauncher: pkg.version
+            })
+
+            shell.showItemInFolder(arquivo)
+
+            new popup().openPopup({
+                title: lang.t('support.title'),
+                content: lang.t('support.done', { file: arquivo }) +
+                    (diagnostico.avisos.length
+                        ? '<br><br>' + diagnostico.avisos.map(a => lang.t(`support.warn_${a}`)).join('<br>')
+                        : ''),
+                color: 'var(--gold)',
+                options: true
+            })
+        } catch (err) {
+            console.error('[suporte] não consegui montar o relatório:', err)
+            new popup().openPopup({
+                title: lang.t('common.error'),
+                content: lang.t('support.failed'),
+                color: 'red',
+                options: true
+            })
+        }
+    }
+
+    /**
+     * Traduz o "tipo" que a minecraft-java-core informa para algo que o jogador
+     * entenda. Para os arquivos do modpack o tipo é a primeira pasta do caminho
+     * ("mods", "config", "shaderpacks"), então na prática a barra passa a dizer
+     * o que está baixando de verdade.
+     */
+    nomeDoQue(element) {
+        if (!element) return ''
+
+        let conhecidos = {
+            Libraries: 'home.part_libraries',
+            Assets: 'home.part_assets',
+            Java: 'home.part_java',
+            CFILE: 'home.part_files',
+            mods: 'home.part_mods',
+            config: 'home.part_config',
+            shaderpacks: 'home.part_shaders',
+            resourcepacks: 'home.part_resources',
+            kubejs: 'home.part_scripts'
+        }
+
+        return conhecidos[element] ? lang.t(conhecidos[element]) : String(element)
+    }
+
+    /**
+     * Argumentos que fazem o Minecraft já entrar no servidor, pulando o menu
+     * de multijogador.
+     *
+     * O --quickPlayMultiplayer é do 1.20 para cima; em versão mais antiga o
+     * jogo ignoraria, então só mandamos quando a versão comporta. Sem IP
+     * configurado na instância não há para onde ir.
+     */
+    quickPlayArgs(configClient, options) {
+        if (configClient?.launcher_config?.quickPlay === false) return []
+
+        let ip = options?.status?.ip
+        if (!ip) return []
+
+        let versao = String(options?.loader?.minecraft_version || '')
+        let [maior, menor] = versao.split('.').map(Number)
+        if (!(maior > 1 || (maior === 1 && menor >= 20))) return []
+
+        let porta = Number(options.status.port) || 25565
+        return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
     }
 
     /* ---------------------------------------------------------- jogar --- */
@@ -421,7 +709,7 @@ class Home {
             },
 
             JVM_ARGS: options.jvm_args ? options.jvm_args : [],
-            GAME_ARGS: options.game_args ? options.game_args : [],
+            GAME_ARGS: [...(options.game_args || []), ...this.quickPlayArgs(configClient, options)],
 
             screen: {
                 width: configClient.game_config.screen_size.width,
@@ -463,8 +751,11 @@ class Home {
             console.log(extract);
         });
 
-        launch.on('progress', (progress, size) => {
-            infoStarting.innerHTML = lang.t('home.downloading', { percent: ((progress / size) * 100).toFixed(0) })
+        launch.on('progress', (progress, size, element) => {
+            infoStarting.innerHTML = lang.t('home.downloading_what', {
+                percent: ((progress / size) * 100).toFixed(0),
+                what: this.nomeDoQue(element)
+            })
             ipcRenderer.send('main-window-progress', { progress, size })
             progressBar.value = progress;
             progressBar.max = size;
@@ -507,8 +798,17 @@ class Home {
             // ficou instalada aqui, para saber depois se saiu uma mais nova.
             if (!this.marked) {
                 this.marked = true
+
+                // Guarda a versão que estava instalada ANTES, para saber o que
+                // mostrar de novidade quando o jogo fechar.
+                let anterior = modpack.readLocal(base, options.name)
                 let remote = await modpack.remoteVersion(options.url)
+
                 if (remote) {
+                    if (state === 'update' && anterior?.version && anterior.version !== remote.version) {
+                        this.novidadesDesde = { instance: options, version: anterior.version }
+                    }
+
                     modpack.writeLocal(base, options.name, {
                         version: remote.version,
                         publishedAt: remote.publishedAt,
@@ -516,6 +816,14 @@ class Home {
                     })
                 }
             }
+
+            // Enquanto o jogo roda, o perfil do Discord mostra isso.
+            presenca.definir({
+                detalhes: lang.t('presence.playing', { pack: options.displayName || options.name }),
+                estado: lang.t('presence.on_server'),
+                desde: Math.floor(Date.now() / 1000),
+                convite: 'https://discord.gg/92cDk8rZKK'
+            })
 
             if (configClient.launcher_config.closeLauncher == 'close-launcher') {
                 ipcRenderer.send("main-window-hide")
@@ -539,6 +847,19 @@ class Home {
             new logger(pkg.name, '#7289da');
             this.marked = false
             this.refreshState(options)
+
+            presenca.definir({
+                detalhes: lang.t('presence.in_launcher'),
+                convite: 'https://discord.gg/92cDk8rZKK'
+            })
+
+            // Atualizou nesta sessão? Conta o que mudou, agora que dá para ler.
+            if (this.novidadesDesde) {
+                let { instance, version } = this.novidadesDesde
+                this.novidadesDesde = null
+                this.showChangelog(instance, version)
+            }
+
             console.log('Close');
         });
 

@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const MARKER = '.atena-version.json';
 
@@ -174,6 +175,76 @@ class Modpack {
             }
         }
         return [...expanded];
+    }
+
+    /* -------------------------------------------- verificar e reparar ---- */
+
+    /**
+     * Confere arquivo por arquivo contra o manifesto e apaga o que não bate.
+     *
+     * O launcher já baixa só o que mudou, mas ele confia no que está em disco.
+     * Quando um arquivo corrompe — queda de energia no meio do download, disco
+     * com problema, antivírus mexendo num .jar — o tamanho continua parecendo
+     * certo e o jogo quebra sem explicação. Aqui o SHA-1 é recalculado de
+     * verdade; o que não bater é apagado, e o próximo Jogar baixa de novo.
+     *
+     * É mais barato que reinstalar: em vez de 1,6 GB, baixa só o que quebrou.
+     */
+    async repair(basePath, instance, onProgress) {
+        const folder = this.dir(basePath, instance.name);
+        const files = await this.manifest(instance.url);
+
+        if (!files.length) return { checked: 0, broken: 0, missing: 0 };
+
+        let checked = 0;
+        let broken = 0;
+        let missing = 0;
+
+        for (const file of files) {
+            const full = path.join(folder, file.path);
+            checked += 1;
+            if (onProgress) onProgress(checked, files.length);
+
+            let stat;
+            try {
+                stat = fs.statSync(full);
+            } catch {
+                missing += 1;             // some sozinho no próximo download
+                continue;
+            }
+
+            // O tamanho é a peneira barata: só vale calcular o SHA-1 de quem
+            // passou por ela, senão a verificação levaria minutos a mais.
+            let ruim = stat.size !== file.size;
+
+            if (!ruim && file.hash) {
+                ruim = await this.sha1(full) !== file.hash;
+            }
+
+            if (ruim) {
+                try {
+                    fs.rmSync(full, { force: true });
+                    broken += 1;
+                } catch (err) {
+                    console.error('[modpack] não consegui apagar o arquivo quebrado:', file.path, err.message);
+                }
+            }
+        }
+
+        // Sem o marcador, o launcher trata como atualização e rebaixa o que falta.
+        if (broken || missing) this.clearLocal(basePath, instance.name);
+
+        return { checked, broken, missing };
+    }
+
+    sha1(file) {
+        return new Promise(resolve => {
+            const hash = crypto.createHash('sha1');
+            const stream = fs.createReadStream(file);
+            stream.on('error', () => resolve(null));
+            stream.on('data', chunk => hash.update(chunk));
+            stream.on('end', () => resolve(hash.digest('hex')));
+        });
     }
 
     /* ------------------------------------------------------ reinstalar --- */
