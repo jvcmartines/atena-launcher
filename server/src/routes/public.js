@@ -69,7 +69,11 @@ router.get('/api/config', blockBanned, (req, res) => {
         discord: {
             enabled: settings.enabled,
             required: settings.required,
-            linked: !!req.player
+            linked: !!req.player,
+            // O client_id não é segredo (ele aparece na URL de autorização) e o
+            // launcher precisa dele para o "Jogando Atena" no perfil. O que
+            // nunca sai daqui é o clientSecret.
+            clientId: settings.clientId || ''
         }
     });
 });
