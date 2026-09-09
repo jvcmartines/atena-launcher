@@ -24,6 +24,48 @@ import news from './utils/news.js';
 import suporte from './utils/suporte.js';
 import presenca from './utils/presenca.js';
 
+/**
+ * Fundo de época.
+ *
+ * Basta a staff criar uma subpasta com um destes nomes dentro de
+ * assets/images/background/dark (ou light) e jogar imagens lá: na data certa
+ * o launcher passa a sortear dali. Sem a pasta, nada muda — por isso não há
+ * nenhuma configuração para ligar isso.
+ *
+ * As faixas são [mês, dia] a [mês, dia], com o mês começando em 1.
+ */
+const EVENTOS = [
+    { pasta: 'halloween', de: [10, 18], ate: [11, 2] },
+    { pasta: 'natal', de: [12, 10], ate: [1, 6] },
+    { pasta: 'junina', de: [6, 1], ate: [6, 30] },
+    { pasta: 'aniversario', de: [0, 0], ate: [0, 0] }   // a staff define a data editando aqui
+];
+
+function pastaDoEvento(pastaBase) {
+    let hoje = new Date();
+    let mes = hoje.getMonth() + 1;
+    let dia = hoje.getDate();
+
+    for (let evento of EVENTOS) {
+        if (!dentroDaFaixa(mes, dia, evento.de, evento.ate)) continue;
+
+        let caminho = `${pastaBase}/${evento.pasta}`;
+        if (fs.existsSync(caminho)) return caminho;
+    }
+    return null;
+}
+
+/** Trata faixas que viram o ano, como 10 de dezembro a 6 de janeiro. */
+function dentroDaFaixa(mes, dia, de, ate) {
+    if (!de[0] || !ate[0]) return false;
+
+    let agora = mes * 100 + dia;
+    let inicio = de[0] * 100 + de[1];
+    let fim = ate[0] * 100 + ate[1];
+
+    return inicio <= fim ? agora >= inicio && agora <= fim : agora >= inicio || agora <= fim;
+}
+
 async function setBackground(theme) {
     if (typeof theme == 'undefined') {
         let databaseLauncher = new database();
@@ -34,13 +76,24 @@ async function setBackground(theme) {
     let background
     let body = document.body;
     body.className = theme ? 'dark global' : 'light global';
-    if (fs.existsSync(`${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`)) {
-        let backgrounds = fs.readdirSync(`${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`);
+
+    let pastaBase = `${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`;
+    let evento = pastaDoEvento(pastaBase);
+    let pasta = evento || pastaBase;
+
+    if (fs.existsSync(pasta)) {
+        let backgrounds = fs.readdirSync(pasta).filter(nome => /\.(png|jpe?g|webp)$/i.test(nome));
+        if (!backgrounds.length) {
+            pasta = pastaBase;
+            backgrounds = fs.readdirSync(pasta).filter(nome => /\.(png|jpe?g|webp)$/i.test(nome));
+        }
+
         let Background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+        let sufixo = pasta === pastaBase ? '' : `/${pasta.split('/').pop()}`;
         let scrim = theme
             ? 'linear-gradient(180deg, rgba(16,3,10,.52) 0%, rgba(16,3,10,.76) 52%, rgba(16,3,10,.95) 100%)'
             : 'linear-gradient(180deg, rgba(255,250,246,.5) 0%, rgba(255,248,244,.72) 52%, rgba(252,244,240,.9) 100%)';
-        background = `${scrim}, url(./assets/images/background/${theme ? 'dark' : 'light'}/${Background})`;
+        background = `${scrim}, url(./assets/images/background/${theme ? 'dark' : 'light'}${sufixo}/${Background})`;
     }
     body.style.backgroundImage = background ? background : theme ? '#000' : '#fff';
     body.style.backgroundSize = 'cover';
