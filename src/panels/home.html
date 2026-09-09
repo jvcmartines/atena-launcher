@@ -3,12 +3,6 @@
     <main class="hero">
         <img class="brand-logo" src="assets/images/atena-logo.png" alt="Atena Launcher">
 
-        <!-- só quantos estão jogando; o resto sai da frente -->
-        <div class="stat glass status-player-count" data-i18n-title="home.players_title">
-            <div class="stat-value player-count">0</div>
-            <div class="stat-label players-label" data-i18n="home.players_label"></div>
-        </div>
-
         <!-- banido, ou sem nenhum modpack liberado: a razao aparece aqui -->
         <div class="blocked-box glass">
             <div class="blocked-title"></div>
@@ -48,6 +42,14 @@
         </div>
 
         <div class="bottom-right">
+            <!-- a contagem saiu do meio da tela: virou um ponto no rodapé, que
+                 continua abrindo a lista de quem está jogando -->
+            <div class="status-player-count" data-i18n-title="home.players_title">
+                <span class="pulse-dot"></span>
+                <span class="player-count">0</span>
+                <span class="players-label" data-i18n="home.players_label"></span>
+            </div>
+
             <!-- o IP saiu do meio da tela, mas continua a um clique -->
             <div class="ip-row" data-i18n-title="home.ip_title">
                 <span class="server-ip">atenasmp.com</span>

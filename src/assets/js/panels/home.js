@@ -189,7 +189,7 @@ class Home {
     }
 
     /**
-     * Clicar no card de jogadores abre a lista de quem está no servidor.
+     * Clicar no indicador do rodapé abre a lista de quem está no servidor.
      *
      * Os nomes vêm do próprio protocolo do Minecraft, que limita a amostra
      * (normalmente 12 nomes) e deixa o servidor escondê-la. Quando não vem

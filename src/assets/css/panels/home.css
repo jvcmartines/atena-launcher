@@ -1,7 +1,7 @@
 /**
- * Tela inicial: tudo centralizado numa coluna só. Na tela ficam apenas as duas
- * informações que importam antes de entrar — o servidor está no ar? quantos
- * estão jogando? — mais o IP e o botão de jogar.
+ * Tela inicial: o meio da tela é só a logo e o botão de jogar. Tudo o mais —
+ * quem está online, o IP, a conta, as configurações — vive no rodapé, a um
+ * clique de distância mas fora do caminho.
  */
 
 .home {
@@ -41,53 +41,11 @@
     }
 }
 
-/* -------------------------------------------------- jogadores online --- */
-
-.status-player-count {
-    margin-top: 30px;
-    padding: 16px 34px;
-    border-radius: 16px;
-    text-align: center;
-    cursor: pointer;
-    animation: rise 0.7s 0.12s var(--ease) backwards;
-    transition: var(--transition);
-}
-
-.status-player-count:hover {
-    border-color: var(--stroke-strong);
-    transform: translateY(-2px);
-}
-
-.stat-value {
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--gold);
-}
-
-.status-player-count.red .stat-value {
-    color: var(--color-faint);
-}
-
-.stat-label {
-    margin-top: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: var(--color-faint);
-    white-space: nowrap;
-}
-
-.status-player-count.red .stat-label {
-    color: var(--danger);
-}
-
 /* --------------------------------------------------------- botão jogar - */
 
 .play-elements {
     width: min(340px, 78vw);
-    margin-top: 30px;
+    margin-top: 38px;
     animation: rise 0.7s 0.24s var(--ease) backwards;
 }
 
@@ -464,9 +422,8 @@
         width: min(240px, 44vw);
     }
 
-    .stats,
     .play-elements {
-        margin-top: 20px;
+        margin-top: 24px;
     }
 }
 
@@ -478,12 +435,71 @@
 
 /* ------------------------------------------------- quem está jogando --- */
 
+/* No rodapé, discreto: um ponto que pulsa enquanto o servidor está no ar, o
+   número e o rótulo. Clicar abre a lista de quem está jogando. */
 .status-player-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
     cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
 }
 
 .status-player-count:hover {
     border-color: var(--stroke-strong);
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 var(--success);
+    animation: pulse 2.4s var(--ease) infinite;
+}
+
+@keyframes pulse {
+    to {
+        box-shadow: 0 0 0 7px transparent;
+    }
+}
+
+.player-count {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gold-100);
+}
+
+.players-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--color-faint);
+}
+
+/* Fora do ar: o ponto para de pulsar e fica vermelho. */
+.status-player-count.red .pulse-dot {
+    background: var(--danger);
+    animation: none;
+}
+
+.status-player-count.red .player-count {
+    color: var(--color-faint);
+}
+
+@media (max-width: 860px) {
+    .status-player-count .players-label {
+        display: none;
+    }
 }
 
 .players-popup {
