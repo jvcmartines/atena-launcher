@@ -26,11 +26,19 @@ function createWindow() {
     updateWindow = new BrowserWindow({
         title: "Atualização",
         width: 400,
-        height: 500,
+        height: 440,
         resizable: false,
         icon: `./src/assets/images/icon/icon.${os.platform() === "win32" ? "ico" : "png"}`,
         frame: false,
         show: false,
+
+        // Janela sem fundo: aparecem so a logo e o texto, flutuando sobre o
+        // que estiver na tela. Precisa de transparent + backgroundColor
+        // totalmente transparente; so um dos dois nao basta no Windows.
+        transparent: true,
+        backgroundColor: '#00000000',
+        hasShadow: false,
+        skipTaskbar: false,
         webPreferences: {
             contextIsolation: false,
             nodeIntegration: true

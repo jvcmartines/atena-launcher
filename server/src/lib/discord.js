@@ -28,7 +28,8 @@ function settings() {
         clientId: config.discord?.clientId || '',
         clientSecret: config.discord?.clientSecret || '',
         guildId: config.discord?.guildId || '',
-        requireGuild: !!config.discord?.requireGuild
+        requireGuild: !!config.discord?.requireGuild,
+        staffRoleId: config.discord?.staffRoleId || ''
     };
 }
 

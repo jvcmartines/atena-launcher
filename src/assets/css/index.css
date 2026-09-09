@@ -17,24 +17,8 @@ body {
     user-select: none;
     font-family: 'Poppins', system-ui, sans-serif;
     color: var(--color);
-    background: var(--background);
-}
-
-body.dark {
-    background:
-        radial-gradient(520px 320px at 50% 14%, rgba(242, 199, 92, 0.16), transparent 70%),
-        linear-gradient(170deg, var(--wine-700) 0%, var(--wine-900) 55%, #0B0206 100%);
-}
-
-body.light {
-    background:
-        radial-gradient(520px 320px at 50% 14%, rgba(242, 199, 92, 0.3), transparent 70%),
-        linear-gradient(170deg, #FFF7EE 0%, #F4EEF0 100%);
-}
-
-img {
-    -webkit-user-drag: none;
-    user-select: none;
+    /* Sem fundo: a janela e transparente e so a logo e o texto aparecem. */
+    background: transparent;
 }
 
 #splash {
@@ -47,34 +31,6 @@ img {
     padding: 34px 30px 0;
     -webkit-app-region: drag;
 }
-
-/* Halo dourado girando devagar atrás da logo. */
-.splash-glow {
-    position: absolute;
-    top: 22%;
-    left: 50%;
-    width: 300px;
-    height: 300px;
-    transform: translate(-50%, -50%);
-    background: conic-gradient(from 0deg,
-            rgba(242, 199, 92, 0) 0deg,
-            rgba(242, 199, 92, 0.18) 90deg,
-            rgba(242, 199, 92, 0) 200deg,
-            rgba(223, 161, 59, 0.14) 300deg,
-            rgba(242, 199, 92, 0) 360deg);
-    border-radius: 50%;
-    filter: blur(28px);
-    animation: halo 9s linear infinite;
-    pointer-events: none;
-}
-
-@keyframes halo {
-    to {
-        transform: translate(-50%, -50%) rotate(360deg);
-    }
-}
-
-/* ------------------------------------------------------------- logo ---- */
 
 .splash {
     width: 288px;
@@ -158,4 +114,19 @@ img {
 .progress::-webkit-progress-value {
     background: linear-gradient(90deg, var(--gold-600), var(--gold-100));
     border-radius: 999px;
+}
+
+/* --------------------------------------------- janela sem fundo -------- */
+
+/* Sobre um fundo qualquer, a logo e o texto precisam se defender sozinhos. */
+.splash {
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.75));
+}
+
+.message {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+.splash-glow {
+    display: none;
 }

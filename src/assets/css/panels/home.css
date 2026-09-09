@@ -691,3 +691,24 @@
     border: 2px solid var(--wine-900);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
+
+/* ---------------------------------------------------- selo de staff ---- */
+
+.player-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+
+.staff-badge {
+    flex-shrink: 0;
+    padding: 2px 7px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
+    border-radius: 5px;
+}

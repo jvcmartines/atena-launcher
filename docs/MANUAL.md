@@ -483,6 +483,35 @@ primeira instalação de mais de 1 GB, é a diferença entre "travou?" e "faltam
 
 ---
 
+## Quando o jogador não pode jogar
+
+Três situações tiram o botão de jogar da tela. Em todas, o launcher **abre
+normalmente** e explica o motivo no lugar do botão — nada de fechar na cara de
+quem não entendeu o que houve. As configurações continuam acessíveis, então a
+pessoa consegue trocar de conta ou de idioma.
+
+| Situação | O que aparece |
+|---|---|
+| **Banido** | O motivo que a staff escreveu ao banir |
+| **Nenhum modpack liberado** | Um aviso para procurar a staff no Discord |
+| **Servidor em manutenção** | A mensagem de manutenção, ainda na tela de abertura |
+
+O caso "nenhum modpack liberado" acontece quando todos os modpacks estão
+restritos por cargo e o jogador não tem nenhum, ou quando a staff desativa o
+único que existe.
+
+---
+
+## Versão do launcher
+
+Aparece embaixo do menu de **Configurações**, como `v1.0.3`.
+
+Serve para duas coisas: quando alguém pede ajuda no Discord, você pergunta a
+versão e a pessoa tem onde olhar; e depois de uma atualização automática, é
+como conferir que ela realmente aconteceu.
+
+---
+
 ## Idiomas
 
 O launcher abre em **inglês** por padrão. O jogador troca em

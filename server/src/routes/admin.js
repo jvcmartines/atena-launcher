@@ -172,7 +172,8 @@ router.put('/config', express.json(), wrap(async (req, res) => {
             ? String(discordBody.clientSecret).trim()
             : (current.discord?.clientSecret || ''),
         guildId: String(discordBody.guildId ?? current.discord?.guildId ?? '').trim(),
-        requireGuild: !!discordBody.requireGuild
+        requireGuild: !!discordBody.requireGuild,
+        staffRoleId: String(discordBody.staffRoleId ?? current.discord?.staffRoleId ?? '').trim()
     };
 
     // online aceita boolean (Microsoft/offline) ou a URL do Azuriom.

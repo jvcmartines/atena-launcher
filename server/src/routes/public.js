@@ -193,12 +193,18 @@ router.get('/api/discord/config', (req, res) => {
 });
 
 function publicPlayer(player) {
+    // Quem é staff é decidido aqui, não no launcher: assim a lista de cargos
+    // da pessoa não precisa sair do servidor, e trocar o cargo de staff é
+    // mexer numa configuração, não recompilar o launcher.
+    const { staffRoleId } = discord.settings();
+
     return {
         id: player.id,
         username: player.username,
         globalName: player.globalName,
         avatar: player.avatar,
         inGuild: player.inGuild,
+        isStaff: !!staffRoleId && (player.roles || []).includes(staffRoleId),
         banned: !!player.banned,
         banReason: player.banReason || ''
     };

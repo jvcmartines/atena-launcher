@@ -32,7 +32,11 @@ const DEFAULT_CONFIG = {
         // Id do seu servidor do Discord — necessário para ler os cargos
         guildId: '',
         // true recusa quem não está no seu servidor do Discord
-        requireGuild: false
+        requireGuild: false,
+
+        // Cargo que ganha o selo de staff no launcher. Deixe vazio para
+        // ninguém receber selo nenhum.
+        staffRoleId: ''
     }
 };
 

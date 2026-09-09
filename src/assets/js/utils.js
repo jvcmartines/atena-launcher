@@ -109,6 +109,9 @@ async function showDiscordIdentity(account) {
         player = null;
     }
 
+    let staffBadge = document.querySelector('.staff-badge');
+    if (staffBadge) staffBadge.style.display = player?.isStaff ? '' : 'none';
+
     if (!player) {
         if (badge) badge.style.display = 'none';
         if (typeElement) typeElement.textContent = account ? accountLabel(account) : '';

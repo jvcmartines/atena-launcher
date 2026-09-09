@@ -39,6 +39,16 @@ class Launcher {
         config.setPlayerToken(token);
         discord.configure(config.getApiUrl(), token);
 
+        // Atualiza o registro do jogador guardado localmente: se a staff deu ou
+        // tirou um cargo no Discord, o selo acompanha sem precisar reconectar.
+        if (token) {
+            let atual = await discord.status();
+            if (atual?.player) {
+                configClient.discord.player = atual.player;
+                await this.db.updateData('configClient', configClient);
+            }
+        }
+
         this.config = await config.GetConfig().then(res => res).catch(err => err);
 
         if (await this.config.error) {

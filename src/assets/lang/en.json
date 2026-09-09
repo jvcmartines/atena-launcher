@@ -101,6 +101,7 @@
     "account.mojang": "Mojang account",
     "account.connected": "connected account",
     "account.loading": "Loading...",
+    "account.staff": "Staff",
     "skin.title": "Your skin",
     "skin.text": "Change your Minecraft skin without leaving the launcher. It talks straight to Mojang, so the skin changes everywhere — not only here.",
     "skin.classic": "Classic (Steve)",
