@@ -36,11 +36,34 @@ server {
     # Os arquivos do modpack são estáticos e podem ser bem grandes.
     # Servir direto pelo nginx tira essa carga do Node.
     #
-    # Descomente e ajuste o caminho para a pasta files/ da sua instalação.
+    # ATENÇÃO: se você descomentar isto, o /files/ deixa de passar pelo Node —
+    # e é o Node que confere quem pode baixar. Sem o secure_link abaixo, o
+    # modpack fica aberto para qualquer um que saiba um caminho, mesmo com o
+    # acesso restrito por cargo no painel.
+    #
+    # O segredo é o conteúdo de server/data/files.key. Copie-o para dentro das
+    # aspas do secure_link_md5 (ou guarde num snippet fora do controle de
+    # versão, que é o mais seguro):
+    #
+    #     sudo mkdir -p /etc/nginx/snippets
+    #     printf 'secure_link_md5 "$secure_link_expires$uri %s";\n' \
+    #         "$(cat /opt/atena-launcher/server/data/files.key)" \
+    #         | sudo tee /etc/nginx/snippets/atena-files-secret.conf > /dev/null
+    #     sudo chmod 640 /etc/nginx/snippets/atena-files-secret.conf
+    #
+    # Precisa do nginx compilado com --with-http_secure_link_module (o pacote
+    # do Debian/Ubuntu já vem com ele). Confira com: nginx -V 2>&1 | grep secure_link
     #
     # location /files/ {
+    #     secure_link $arg_md5,$arg_expires;
+    #     include /etc/nginx/snippets/atena-files-secret.conf;
+    #
+    #     # "" = assinatura inválida ou ausente; "0" = assinatura boa, prazo vencido.
+    #     if ($secure_link = "") { return 403; }
+    #     if ($secure_link = "0") { return 410; }
+    #
     #     alias /opt/atena-launcher/server/files/;
-    #     add_header Cache-Control "public, max-age=300";
+    #     add_header Cache-Control "private, max-age=300";
     #     sendfile on;
     #     tcp_nopush on;
     # }

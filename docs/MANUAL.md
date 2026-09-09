@@ -84,6 +84,29 @@ sudo certbot --nginx -d launcher.seudominio.com.br
 Repare no `client_max_body_size 8G` do arquivo do nginx: sem isso, o upload do modpack
 morre no meio com erro 413.
 
+#### Proteger os arquivos do modpack
+
+O manifesto (a lista de arquivos) é filtrado por cargo, mas os arquivos em si
+precisam de uma trava própria — senão basta alguém repassar um caminho para
+qualquer pessoa baixar o modpack.
+
+Cada link do manifesto vai **assinado e com prazo**. Quem confere a assinatura é
+o nginx, com o módulo `secure_link`, para o arquivo continuar sendo servido
+estático (é o que aguenta 1,6 GB sem ocupar o Node). O `nginx.conf.example` traz
+o bloco pronto, comentado, com o passo a passo.
+
+O segredo fica em `server/data/files.key`, gerado sozinho na primeira execução.
+Ele precisa ser **o mesmo** nos dois lados: no arquivo e no `secure_link_md5` do
+nginx. Se você trocar um, troque o outro — links antigos param de valer na hora,
+o que é justamente o que se quer ao fechar um vazamento.
+
+Sem nginx na frente (desenvolvimento, ou acesso direto à porta do Node), o
+próprio Node faz a mesma conferência. Não é preciso configurar nada para isso.
+
+> Se um dia os downloads começarem a dar **403**, é assinatura: o segredo do
+> nginx e o do `files.key` estão diferentes. **410** é outra coisa — o link
+> venceu, e basta reabrir o launcher para pegar um novo.
+
 ### 1.6 Primeiro acesso
 
 Abra `https://launcher.seudominio.com.br/admin`. Na primeira vez a tela pede para você
@@ -185,7 +208,24 @@ Pronto. O próximo jogador que abrir o launcher já baixa a atualização.
 > arquivos com calma, conferir e só depois liberar. O painel avisa com um selo laranja
 > quando há mudanças não publicadas.
 
-### 3.4 Ajustes pequenos
+### 3.4 Publicar a partir de um link
+
+Se o `.zip` já está numa release do GitHub (ou em qualquer link direto), não
+precisa subir pelo navegador:
+
+1. Painel → **Modpacks** → **Arquivos** → **Importar de um link**
+2. Cole o link **do arquivo**, o que termina em `.zip` — não o da página da release
+3. Escolha o mesmo `strip` e o mesmo "apagar tudo antes" que você escolheria no upload
+
+O servidor baixa sozinho, direto da origem. É bem mais rápido — o arquivo vai
+de datacenter para datacenter, sem passar pela internet da sua casa — e não
+morre se a sua conexão cair no meio.
+
+> O servidor só aceita `http://` e `https://`, e recusa endereços internos
+> (`localhost`, `127.0.0.1`, `10.x`, `169.254.x`). Isso não é frescura: sem esse
+> filtro, o campo de link deixaria qualquer staff ler serviços internos da VPS.
+
+### 3.5 Ajustes pequenos
 
 Para trocar um mod só, não precisa refazer o zip: navegue até `mods/`, apague o antigo,
 use **Enviar arquivos** para mandar o novo, e publique.
@@ -229,7 +269,9 @@ O launcher se auto-atualiza pelas **releases do GitHub**. O workflow em
 `.github/workflows/build.yml` faz tudo:
 
 1. Suba a `version` no `package.json` (ex.: `1.0.0` → `1.0.1`).
-   **Precisa ser maior que a da última release**, senão a auto-atualização não dispara.
+   **Precisa ser maior que a da última release**, senão a auto-atualização não dispara —
+   é a regra que não dá para quebrar aqui: o `electron-updater` compara versões, e uma
+   release com a mesma versão (ou menor) simplesmente não chega a ninguém.
 2. `git commit` e `git push` para a branch `master`.
 3. O GitHub Actions compila para Windows, macOS e Linux e anexa os instaladores
    à release.
@@ -342,7 +384,15 @@ A engrenagem ao lado do botão abre as opções:
 - **Reinstalar o modpack** — apaga os mods e os configs e baixa tudo de novo.
   Mundos, prints, teclas e as pastas protegidas **não** são apagados. É o que
   resolve quando a instalação corrompe.
+- **Verificar e reparar** — confere o SHA-1 de cada arquivo contra o servidor e
+  apaga só os que não batem. Resolve modpack corrompido baixando alguns megabytes
+  em vez de 1,6 GB. **Tente isto antes de mandar reinstalar.**
+- **O que mudou** — o histórico de todas as versões publicadas, com o texto que a
+  staff escreveu em cada uma.
 - **Abrir a pasta do jogo** — para o jogador achar os mundos e os prints.
+- **Relatar um problema** — junta `latest.log`, os crash-reports recentes e um
+  diagnóstico da máquina num `.zip` e abre a pasta. É o arquivo para pedir no
+  Discord em vez de "manda o log".
 
 Antes de reinstalar o launcher tira um backup, então nada se perde de vez.
 
@@ -512,6 +562,82 @@ como conferir que ela realmente aconteceu.
 
 ---
 
+## Avisos e "o que mudou"
+
+São duas coisas parecidas, com origens diferentes:
+
+**Avisos** são texto que você escreve no painel (aba **Notícias**): manutenção às
+20h, evento no sábado, wipe. Aparecem num botão no rodapé do launcher, com um
+ponto dourado enquanto a pessoa não abrir. Antes isso só existia no Discord, e
+nem todo mundo lê o Discord.
+
+**O que mudou** é o changelog de cada versão do modpack — o texto que você
+escreve na hora de publicar. Depois de atualizar, o launcher mostra sozinho tudo
+o que saiu desde a versão que a pessoa tinha. Quem ficou três versões para trás
+vê as três.
+
+> Vale escrever o changelog mesmo curto. É o que transforma "atualizou de novo?"
+> em "ah, entrou o Farmers Delight".
+
+---
+
+## Presença no Discord
+
+Quem está com o launcher aberto aparece no Discord como **Jogando Atena**, com
+quantos estão online e um botão para entrar no servidor do Discord. Enquanto o
+Minecraft roda, o Discord conta o tempo de jogo sozinho.
+
+Não precisa configurar nada além do `client_id` que a verificação por Discord já
+usa. Se a pessoa não tiver o Discord aberto, simplesmente não acontece nada.
+
+---
+
+## O computador do jogador
+
+Em **Configurações → Launcher → O seu computador** aparece o que o launcher
+enxerga da máquina: sistema, processador, RAM total e alocada, espaço em disco e
+tamanho do modpack.
+
+Ele também avisa quando algo está claramente errado — por exemplo, RAM alocada
+acima da metade da máquina, que é a causa mais comum de travamento em modpack
+grande (sufocar o Windows trava mais que um limite baixo).
+
+Os mesmos números vão dentro do `.zip` de **Relatar um problema**.
+
+### Perfis de desempenho
+
+Três botões em **Configurações → Java e RAM** ajustam a memória de uma vez:
+**PC mais fraco** (4–6 GB), **PC normal** (6–10 GB) e **PC bom** (8–16 GB),
+sempre deixando 2 GB para o sistema. Quem quiser afinar continua tendo o
+controle deslizante.
+
+---
+
+## Entrar direto no servidor
+
+Ligado por padrão em **Configurações → Launcher**: o jogo abre já conectando no
+Atena, sem passar pelo menu de multijogador. Usa o `--quickPlayMultiplayer`, que
+existe do Minecraft 1.20 em diante — em versão mais antiga o launcher
+simplesmente não manda o argumento.
+
+---
+
+## Fundo de época
+
+Crie uma subpasta em `src/assets/images/background/dark/` com um destes nomes e
+jogue imagens dentro:
+
+| Pasta | Quando aparece |
+|---|---|
+| `halloween` | 18 de outubro a 2 de novembro |
+| `natal` | 10 de dezembro a 6 de janeiro |
+| `junina` | todo o mês de junho |
+
+Fora dessas datas, ou sem a pasta, o launcher sorteia os fundos normais. Não há
+nada para ligar ou desligar: a existência da pasta é o interruptor.
+
+---
+
 ## Idiomas
 
 O launcher abre em **inglês** por padrão. O jogador troca em
@@ -659,8 +785,18 @@ propósito. Elas ficam disponíveis em `/api/articles` para o site do Atena cons
 | `GET /api/instances` | Modpacks disponíveis |
 | `GET /api/instances/:id/files` | Lista de arquivos com SHA-1 |
 | `GET /api/instances/:id/version` | Versão publicada e changelog |
+| `GET /api/instances/:id/changelog` | Histórico de versões; `?since=N` traz só o que veio depois da N |
+| `GET /api/instances/:id/server-status` | Quem está online, ping e MOTD |
 
 Todas liberadas por CORS.
+
+As rotas de modpack respeitam o acesso configurado: quem não pode ver recebe
+**404**, não uma lista vazia. O token do jogador vai no cabeçalho
+`x-atena-player`.
+
+A URL do manifesto em `/api/instances` já vem assinada, porque a
+`minecraft-java-core` busca o manifesto sozinha, com um `fetch` sem cabeçalho
+nenhum — o token não chegaria lá.
 
 ---
 
