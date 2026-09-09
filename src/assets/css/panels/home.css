@@ -669,3 +669,25 @@
     line-height: 1.6;
     color: var(--color-dim);
 }
+
+/* ------------------------------------------- identidade do discord ----- */
+
+.head-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* A foto do Discord fica como selo no canto da cabeça do Minecraft: as duas
+   identidades num espaço só, sem crescer o rodapé. */
+.discord-badge {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--background-element);
+    border: 2px solid var(--wine-900);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}

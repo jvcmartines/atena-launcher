@@ -82,9 +82,50 @@ async function accountSelect(data) {
     if (data?.profile?.skins[0]?.base64) headplayer(data.profile.skins[0].base64);
 
     let nameElement = document.querySelector('.player-name');
-    let typeElement = document.querySelector('.player-type');
     if (nameElement) nameElement.textContent = data.name;
-    if (typeElement) typeElement.textContent = accountLabel(data);
+
+    await showDiscordIdentity(data);
+}
+
+/**
+ * Preenche o rodapé com a identidade do Discord: a foto vira um selo no canto
+ * da cabeça, e o nome ocupa a linha de baixo.
+ *
+ * O nick do Minecraft continua sendo o nome principal — é um launcher de
+ * Minecraft, e é o nick que aparece no jogo. O Discord entra como "quem é essa
+ * pessoa na comunidade", que é mais útil ali do que "Microsoft account".
+ *
+ * Sem Discord conectado, volta a mostrar o tipo da conta.
+ */
+async function showDiscordIdentity(account) {
+    let typeElement = document.querySelector('.player-type');
+    let badge = document.querySelector('.discord-badge');
+
+    let player = null;
+    try {
+        let configClient = await new database().readData('configClient');
+        player = configClient?.discord?.player || null;
+    } catch {
+        player = null;
+    }
+
+    if (!player) {
+        if (badge) badge.style.display = 'none';
+        if (typeElement) typeElement.textContent = account ? accountLabel(account) : '';
+        return;
+    }
+
+    if (typeElement) typeElement.textContent = player.globalName || player.username;
+
+    if (badge) {
+        if (player.avatar) {
+            badge.src = player.avatar;
+            badge.style.display = '';
+            badge.onerror = () => { badge.style.display = 'none'; };
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 }
 
 /** Rótulo amigável do tipo de conta, exibido embaixo do nick. */
@@ -201,6 +242,7 @@ export {
     slider as Slider,
     pkg as pkg,
     setStatus as setStatus,
+    showDiscordIdentity as showDiscordIdentity,
     getLastStatus as getLastStatus,
     serverStatus as serverStatus,
     formatSize as formatSize

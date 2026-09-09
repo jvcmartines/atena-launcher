@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -256,15 +256,14 @@ class Home {
         let configClient = await this.db.readData('configClient')
         let account = await this.db.readData('accounts', configClient?.account_selected)
 
-        let nameElement = document.querySelector('.player-name')
-        let typeElement = document.querySelector('.player-type')
-
         if (!account) {
             document.querySelector('.account-chip')?.style.setProperty('display', 'none')
             return
         }
+
+        let nameElement = document.querySelector('.player-name')
         if (nameElement) nameElement.textContent = account.name
-        if (typeElement) typeElement.textContent = configClient?.discord?.player?.username || ''
+        await showDiscordIdentity(account)
     }
 
     /**
