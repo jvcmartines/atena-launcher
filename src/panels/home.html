@@ -2,29 +2,13 @@
 
     <main class="hero">
         <img class="brand-logo" src="assets/images/atena-logo.png" alt="Atena Launcher">
-        <p class="brand-tagline" data-i18n="home.tagline"></p>
 
-        <!-- só o essencial: o servidor está no ar? quantos estão jogando? -->
-        <div class="stats">
-            <div class="stat glass">
-                <div class="stat-value server-status-text" data-i18n="home.status_checking"></div>
-                <div class="stat-label server-ping" data-i18n="home.status_waiting"></div>
-            </div>
-
-            <div class="stat glass status-player-count" data-i18n-title="home.players_title">
-                <div class="stat-value player-count">0</div>
-                <div class="stat-label" data-i18n="home.players_label"></div>
-            </div>
+        <!-- só quantos estão jogando; o resto sai da frente -->
+        <div class="stat glass status-player-count" data-i18n-title="home.players_title">
+            <div class="stat-value player-count">0</div>
+            <div class="stat-label players-label" data-i18n="home.players_label"></div>
         </div>
 
-        <!-- ip do servidor, com botão de copiar -->
-        <div class="ip-row glass" data-i18n-title="home.ip_title">
-            <span class="ip-label" data-i18n="home.ip_label"></span>
-            <span class="server-ip">atenasmp.com</span>
-            <span class="ip-copy" data-i18n="home.ip_copy"></span>
-        </div>
-
-        <!-- jogar / instalar / atualizar -->
         <div class="play-elements">
             <div class="play-instance">
                 <button class="play-btn" data-i18n="home.play"></button>
@@ -52,6 +36,12 @@
         </div>
 
         <div class="bottom-right">
+            <!-- o IP saiu do meio da tela, mas continua a um clique -->
+            <div class="ip-row" data-i18n-title="home.ip_title">
+                <span class="server-ip">atenasmp.com</span>
+                <span class="ip-copy" data-i18n="home.ip_copy"></span>
+            </div>
+
             <div class="social-list">
                 <div data-url="https://atenasmp.com" class="social-block" title="Site">
                     <div class="icon-web icon-social"></div>

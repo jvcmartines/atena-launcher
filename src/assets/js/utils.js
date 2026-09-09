@@ -102,30 +102,33 @@ async function headplayer(skinBase64) {
 }
 
 /**
- * Consulta o servidor de Minecraft e preenche os cartões da tela inicial:
- * status, ping, jogadores online e o IP para copiar.
+ * Consulta o servidor de Minecraft e preenche a tela inicial.
+ *
+ * A tela mostra só a contagem de jogadores, então é o próprio card que carrega
+ * a informação de "fora do ar": o número some e o rótulo passa a dizer isso.
  */
 async function setStatus(opt, instance) {
-    let statusElement = document.querySelector('.server-status-text')
-    let pingElement = document.querySelector('.server-ping')
     let ipElement = document.querySelector('.server-ip')
-    let taglineElement = document.querySelector('.brand-tagline')
     let playersBox = document.querySelector('.status-player-count')
     let playersOnline = document.querySelector('.player-count')
+    let playersLabel = document.querySelector('.players-label')
 
     function offline(reasonKey) {
-        statusElement.classList.add('red')
-        statusElement.innerHTML = lang.t('home.status_offline')
-        if (pingElement) pingElement.innerHTML = lang.t(reasonKey)
-        playersBox.classList.add('red')
-        playersOnline.innerHTML = '0'
+        playersBox?.classList.add('red')
+        if (playersOnline) playersOnline.innerHTML = '—'
+        if (playersLabel) playersLabel.textContent = lang.t(reasonKey)
+    }
+
+    function online(count) {
+        playersBox?.classList.remove('red')
+        if (playersOnline) playersOnline.innerHTML = count
+        if (playersLabel) playersLabel.textContent = lang.t('home.players_label')
     }
 
     if (!opt) return offline('home.status_none')
 
-    let { ip, port, nameServer } = opt
+    let { ip, port } = opt
     if (ipElement) ipElement.textContent = port && Number(port) !== 25565 ? `${ip}:${port}` : ip
-    if (taglineElement && nameServer) taglineElement.textContent = nameServer
 
     // Caminho preferido: perguntar ao nosso servidor, que está ao lado do
     // Minecraft. Além de mais confiável, é o único que traz os nomes.
@@ -134,13 +137,7 @@ async function setStatus(opt, instance) {
     if (fromApi) {
         lastStatus = fromApi
         if (!fromApi.online) return offline('home.status_down')
-
-        statusElement.classList.remove('red')
-        playersBox.classList.remove('red')
-        statusElement.innerHTML = lang.t('home.status_online')
-        if (pingElement) pingElement.innerHTML = `${fromApi.ping || 0} ms`
-        playersOnline.innerHTML = fromApi.players?.online ?? '0'
-        return
+        return online(fromApi.players?.online ?? 0)
     }
 
     // Reserva: ping direto do PC do jogador.
@@ -154,12 +151,7 @@ async function setStatus(opt, instance) {
         ping: statusServer.ms || 0,
         players: { online: statusServer.playersConnect || 0, max: statusServer.playersMax || 0, sample: [] }
     }
-
-    statusElement.classList.remove('red')
-    playersBox.classList.remove('red')
-    statusElement.innerHTML = lang.t('home.status_online')
-    if (pingElement) pingElement.innerHTML = `${statusServer.ms || 0} ms`
-    playersOnline.innerHTML = statusServer.playersConnect || '0'
+    online(statusServer.playersConnect || 0)
 }
 
 /** Último status conhecido, para o popup de jogadores não precisar repingar. */

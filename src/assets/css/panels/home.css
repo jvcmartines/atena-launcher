@@ -29,15 +29,6 @@
     animation: rise 0.7s var(--ease) backwards;
 }
 
-.brand-tagline {
-    margin: 18px 0 0;
-    font-size: 12.5px;
-    letter-spacing: 0.6px;
-    color: var(--color-dim);
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
-    animation: rise 0.7s 0.06s var(--ease) backwards;
-}
-
 @keyframes rise {
     from {
         opacity: 0;
@@ -50,107 +41,46 @@
     }
 }
 
-/* -------------------------------------------------------------- stats -- */
+/* -------------------------------------------------- jogadores online --- */
 
-.stats {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(130px, 165px));
-    gap: 10px;
-    margin-top: 28px;
+.status-player-count {
+    margin-top: 30px;
+    padding: 16px 34px;
+    border-radius: 16px;
+    text-align: center;
+    cursor: pointer;
     animation: rise 0.7s 0.12s var(--ease) backwards;
+    transition: var(--transition);
 }
 
-.stat {
-    padding: 14px 12px;
-    border-radius: 14px;
+.status-player-count:hover {
+    border-color: var(--stroke-strong);
+    transform: translateY(-2px);
 }
 
 .stat-value {
-    font-size: 18px;
+    font-size: 30px;
     font-weight: 700;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.1;
+    color: var(--gold);
+}
+
+.status-player-count.red .stat-value {
+    color: var(--color-faint);
 }
 
 .stat-label {
-    margin-top: 3px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: var(--color-faint);
-}
-
-/* O primeiro card muda de cor conforme o servidor está no ar ou não. */
-.server-status-text {
-    color: var(--success);
-}
-
-.server-status-text.red {
-    color: var(--danger);
-}
-
-.status-player-count .player-count {
-    color: var(--gold);
-}
-
-.status-player-count.red .player-count {
-    color: var(--color-faint);
-}
-
-/* ----------------------------------------------------------------- ip -- */
-
-.ip-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
-    padding: 9px 9px 9px 16px;
-    border-radius: 999px;
-    cursor: pointer;
-    animation: rise 0.7s 0.18s var(--ease) backwards;
-    transition: var(--transition);
-}
-
-.ip-row:hover {
-    border-color: var(--stroke-strong);
-}
-
-.ip-label {
+    margin-top: 4px;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.4px;
-    color: var(--color-faint);
-}
-
-.server-ip {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: var(--gold-100);
-}
-
-.ip-copy {
-    padding: 5px 13px;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
     text-transform: uppercase;
-    color: var(--color-dim);
-    background: var(--background-element);
-    border-radius: 999px;
-    transition: var(--transition);
+    color: var(--color-faint);
+    white-space: nowrap;
 }
 
-.ip-row:hover .ip-copy {
-    color: var(--gold);
-}
-
-.ip-copy.copied {
-    color: var(--wine-900);
-    background: var(--success);
+.status-player-count.red .stat-label {
+    color: var(--danger);
 }
 
 /* --------------------------------------------------------- botão jogar - */
@@ -655,4 +585,57 @@
     margin-top: 7px;
     font-size: 11px;
     color: var(--color-faint);
+}
+
+/* ------------------------------------------------------- ip no rodapé --- */
+
+.ip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 14px;
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ip-row:hover {
+    border-color: var(--stroke-strong);
+}
+
+.server-ip {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--gold-100);
+}
+
+.ip-copy {
+    padding: 4px 10px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--color-faint);
+    background: var(--background-element);
+    border-radius: 999px;
+    transition: var(--transition);
+}
+
+.ip-row:hover .ip-copy {
+    color: var(--gold);
+}
+
+.ip-copy.copied {
+    color: var(--wine-900);
+    background: var(--success);
+}
+
+@media (max-width: 720px) {
+    .ip-row {
+        display: none;
+    }
 }
