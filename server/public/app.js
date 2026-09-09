@@ -867,6 +867,7 @@
             : 'cole o Client Secret aqui';
         form.discordGuildId.value = config.discord?.guildId || '';
         form.discordRequireGuild.checked = !!config.discord?.requireGuild;
+        form.discordStaffRole.value = config.discord?.staffRoleId || '';
         $('#discord-redirect').textContent = config.redirectUri || '—';
 
         const mode = typeof config.online === 'string' ? 'azauth' : (config.online ? 'microsoft' : 'offline');
@@ -904,7 +905,8 @@
                 // vazio significa "mantenha o que já está salvo"
                 clientSecret: form.discordClientSecret.value,
                 guildId: form.discordGuildId.value,
-                requireGuild: form.discordRequireGuild.checked
+                requireGuild: form.discordRequireGuild.checked,
+                staffRoleId: form.discordStaffRole.value
             },
             online: mode === 'azauth' ? form.azauthUrl.value : (mode === 'microsoft')
         };
