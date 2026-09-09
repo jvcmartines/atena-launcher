@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity, news, suporte, presenca } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity, news, suporte, presenca, registro } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -187,7 +187,12 @@ class Home {
             instancePopup.style.display = 'flex'
         })
 
-        playBTN.addEventListener('click', () => this.startGame())
+        // O catch aqui não é decoração: sem ele, qualquer erro antes da tela
+        // mudar deixava o botão vivo e nada acontecia — a pessoa clicava,
+        // clicava, e concluía que travou.
+        playBTN.addEventListener('click', () => {
+            this.startGame().catch(err => this.falhouAoIniciar(err))
+        })
         instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
     }
 
@@ -659,6 +664,31 @@ class Home {
         return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
     }
 
+    /**
+     * Alguma coisa quebrou antes ou durante o começo do jogo.
+     *
+     * Devolve a tela ao estado de repouso — senão o botão fica escondido atrás
+     * de uma barra parada — e diz o que houve, com o caminho do log.
+     */
+    falhouAoIniciar(err) {
+        registro.erro('ao começar o jogo', err)
+
+        let playInstanceBTN = document.querySelector('.play-instance')
+        let infoStartingBOX = document.querySelector('.info-starting-game')
+
+        if (playInstanceBTN) playInstanceBTN.style.display = 'flex'
+        if (infoStartingBOX) infoStartingBOX.style.display = 'none'
+        ipcRenderer.send('main-window-progress-reset')
+
+        new popup().openPopup({
+            title: lang.t('error.start_title'),
+            content: `${lang.t('error.start_text')}<br><br><code>${String(err?.message || err).slice(0, 300)}</code>` +
+                (registro.caminho() ? `<br><br><small>${registro.caminho()}</small>` : ''),
+            color: 'red',
+            options: true
+        })
+    }
+
     /* ---------------------------------------------------------- jogar --- */
 
     async startGame() {
@@ -744,6 +774,16 @@ class Home {
             }
         }
 
+        // A biblioteca confere o SHA-1 de todos os arquivos já baixados ANTES
+        // de emitir qualquer evento. Num modpack de 5 mil arquivos isso leva
+        // minutos, e sem esta mensagem a tela fica parada dizendo "atualizando"
+        // com a barra no zero — que é indistinguível de travado.
+        if (state !== 'install') {
+            infoStarting.innerHTML =
+                `${lang.t('home.preparing')}<br><small>${lang.t('home.preparing_hint')}</small>`
+            progressBar.removeAttribute('value')   // barra indeterminada: está andando, só não dá para medir
+        }
+
         launch.Launch(opt);
 
         launch.on('extract', extract => {
@@ -752,6 +792,7 @@ class Home {
         });
 
         launch.on('progress', (progress, size, element) => {
+            progressBar.value = 0   // sai do modo indeterminado assim que há o que medir
             infoStarting.innerHTML = lang.t('home.downloading_what', {
                 percent: ((progress / size) * 100).toFixed(0),
                 what: this.nomeDoQue(element)
@@ -864,6 +905,7 @@ class Home {
         });
 
         launch.on('error', err => {
+            registro.erro('durante o download ou o jogo', err?.error || err)
             let popupError = new popup()
 
             popupError.openPopup({

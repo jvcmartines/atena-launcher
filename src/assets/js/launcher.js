@@ -9,7 +9,7 @@ import Home from './panels/home.js';
 import Settings from './panels/settings.js';
 
 // import modules
-import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg, lang, discord } from './utils.js';
+import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg, lang, discord, registro, appdata } from './utils.js';
 const { AZauth, Microsoft, Mojang } = require('minecraft-java-core');
 
 // libs
@@ -20,6 +20,7 @@ const os = require('os');
 class Launcher {
     async init() {
         this.initLog();
+        await this.initErrorLog();
         console.log('Initializing Launcher...');
         this.shortcut()
         await setBackground()
@@ -77,6 +78,29 @@ class Launcher {
             }
         })
         new logger(pkg.name, '#7289da')
+    }
+
+    /**
+     * Liga o registro de erros antes de qualquer outra coisa.
+     *
+     * Sem isto, um erro dentro de um `await` sem try/catch some sem deixar
+     * rastro: o launcher para de reagir e ninguém consegue dizer por quê.
+     * Agora vai para %appdata%/.Atena/launcher.log e aparece na tela.
+     */
+    async initErrorLog() {
+        try {
+            let base = `${await appdata()}/${process.platform == 'darwin' ? 'Atena' : '.Atena'}`;
+            registro.iniciar(base, (contexto, mensagem) => {
+                new popup().openPopup({
+                    title: lang.t('error.unexpected_title'),
+                    content: `${lang.t('error.unexpected_text')}<br><br><code>${contexto}: ${String(mensagem).slice(0, 300)}</code>`,
+                    color: 'red',
+                    options: true
+                });
+            });
+        } catch (err) {
+            console.error('não consegui iniciar o registro de erros:', err);
+        }
     }
 
     shortcut() {

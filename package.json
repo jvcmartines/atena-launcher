@@ -2,7 +2,7 @@
     "name": "atena-launcher",
     "preductname": "Atena Launcher",
     "productName": "Atena Launcher",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Launcher oficial do servidor Atena - Minecraft Forge 1.20.1",
     "main": "src/app.js",
     "author": {

@@ -128,6 +128,11 @@ class Suporte {
         // Opções do jogo ajudam a explicar travamento por render distance.
         this.juntar(itens, path.join(pastaJogo, 'options.txt'), 'options.txt');
 
+        // O log do próprio launcher: é onde caem os erros que não aparecem na
+        // tela, e costuma ser o que responde "por que não abriu?".
+        this.juntar(itens, path.join(basePath, 'launcher.log'), 'launcher.log');
+        this.juntar(itens, path.join(basePath, 'launcher.log.old'), 'launcher.log.old');
+
         const resumo = {
             geradoEm: new Date().toISOString(),
             launcher: versaoLauncher,

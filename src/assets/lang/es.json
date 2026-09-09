@@ -219,5 +219,11 @@
     "diag.cores": "{count} núcleos",
     "diag.ram_allocated": "RAM asignada",
     "diag.disk_free": "Espacio libre en el disco",
-    "diag.pack_size": "Tamaño del modpack"
+    "diag.pack_size": "Tamaño del modpack",
+    "error.unexpected_title": "Algo salió mal",
+    "error.unexpected_text": "El launcher encontró un error que no esperaba. Quedó escrito en el archivo de registro, y Modpack → Informar de un problema lo reúne todo para el staff.",
+    "error.start_title": "No pude empezar",
+    "error.start_text": "El juego no arrancó. Los detalles completos están en el registro:",
+    "home.preparing": "Comprobando tus archivos…",
+    "home.preparing_hint": "La primera comprobación de un modpack grande puede tardar unos minutos."
 }

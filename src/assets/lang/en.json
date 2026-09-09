@@ -219,5 +219,11 @@
     "diag.cores": "{count} cores",
     "diag.ram_allocated": "RAM allocated",
     "diag.disk_free": "Free disk space",
-    "diag.pack_size": "Modpack size"
+    "diag.pack_size": "Modpack size",
+    "error.unexpected_title": "Something went wrong",
+    "error.unexpected_text": "The launcher hit an error it did not expect. It was written to the log file, and Modpack → Report a problem packages it up for the staff.",
+    "error.start_title": "Couldn't start",
+    "error.start_text": "The game did not start. The full details are in the log:",
+    "home.preparing": "Checking your files…",
+    "home.preparing_hint": "The first check on a big modpack can take a few minutes."
 }
