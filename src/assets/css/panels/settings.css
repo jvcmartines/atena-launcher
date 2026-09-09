@@ -638,3 +638,12 @@
 .skin-status.working { color: var(--gold) !important; }
 .skin-status.error { color: var(--danger) !important; }
 .skin-status.ok { color: var(--success) !important; }
+
+/* versao do launcher, no rodapé das configurações */
+.launcher-version {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--color-faint);
+}

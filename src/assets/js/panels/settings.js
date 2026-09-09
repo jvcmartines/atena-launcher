@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord, skinChanger, skin2D } from '../utils.js'
+import { changePanel, accountSelect, database, Slider, config, setStatus, popup, appdata, setBackground, lang, backup, formatSize, discord, skinChanger, skin2D, pkg } from '../utils.js'
 const { ipcRenderer, shell } = require('electron');
 const os = require('os');
 const fs = require('fs');
@@ -25,6 +25,7 @@ class Settings {
         this.protectedFolders()
         this.discordAccount()
         this.skin()
+        this.showVersion()
     }
 
     navBTN() {
@@ -405,6 +406,16 @@ class Settings {
             fs.mkdirSync(folder, { recursive: true });
             shell.openPath(folder);
         });
+    }
+
+    /**
+     * Versao do launcher no rodape das configuracoes. Serve para o jogador
+     * responder "qual versao voce esta usando?" quando pedir ajuda, e para
+     * conferir que uma atualizacao realmente aconteceu.
+     */
+    showVersion() {
+        let element = document.querySelector('.launcher-version');
+        if (element) element.textContent = 'v' + pkg.version;
     }
 
     /**
