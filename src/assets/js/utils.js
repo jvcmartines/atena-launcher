@@ -208,7 +208,7 @@ function getLastStatus() {
 /** Pergunta o status ao servidor do Atena (quem está online, ping, MOTD). */
 async function serverStatus(instance) {
     try {
-        let url = instance.url.replace(/\/files$/, '/server-status')
+        let url = modpack.siblingUrl(instance.url, '/server-status')
         let response = await fetch(url, { headers: config.headers() })
         if (!response.ok) return null
         return await response.json()

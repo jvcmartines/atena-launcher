@@ -110,9 +110,20 @@ class Modpack {
         }
     }
 
+    /**
+     * Troca o /files do fim da URL do manifesto por outro endpoint da mesma
+     * instância. A URL vem assinada (…/files?md5=…&expires=…), então a query
+     * precisa sair antes — senão o replace não acha o /files no fim.
+     */
+    siblingUrl(manifestUrl, endpoint) {
+        const [base, query] = String(manifestUrl).split('?');
+        const url = base.replace(/\/files$/, endpoint);
+        return query ? `${url}?${query}` : url;
+    }
+
     async remoteVersion(manifestUrl) {
         try {
-            const response = await fetch(manifestUrl.replace(/\/files$/, '/version'));
+            const response = await fetch(this.siblingUrl(manifestUrl, '/version'));
             if (!response.ok) return null;
             return await response.json();
         } catch {

@@ -96,7 +96,19 @@ router.get('/api/instances', blockBanned, (req, res) => {
         // pode ver simplesmente não existe para ele.
         if (!players.canAccess(instance, req.player)) continue;
 
-        out[instance.id] = toLauncherInstance(instance, PUBLIC_URL);
+        const launcher = toLauncherInstance(instance, PUBLIC_URL);
+
+        // O manifesto vai com a URL assinada porque a minecraft-java-core o
+        // busca sozinha, com um fetch sem cabeçalho nenhum — o token do jogador
+        // não chega lá. Sem isto, um modpack restrito por cargo daria 404 na
+        // hora de instalar, mesmo para quem tem o cargo. A autorização já
+        // aconteceu aqui em cima: quem chegou a receber esta URL pode baixar.
+        if (SIGNED_URLS) {
+            const manifestPath = `/api/instances/${instance.id}/files`;
+            launcher.url = `${launcher.url}?${signed.queryFor(manifestPath)}`;
+        }
+
+        out[instance.id] = launcher;
     }
     res.json(out);
 });
@@ -105,7 +117,12 @@ router.get('/api/instances/:id/files', blockBanned, (req, res) => {
     const instances = store.read('instances', []);
     const instance = instances.find(i => i.id === req.params.id);
 
-    if (!instance || instance.enabled === false || !players.canAccess(instance, req.player)) {
+    // Vale o token do jogador OU a assinatura na própria URL — esta segunda é
+    // como a minecraft-java-core chega aqui, já que ela não manda cabeçalhos.
+    const assinada = SIGNED_URLS &&
+        signed.check(`/api/instances/${req.params.id}/files`, req.query.md5, req.query.expires) === 'ok';
+
+    if (!instance || instance.enabled === false || !(assinada || players.canAccess(instance, req.player))) {
         return res.status(404).json({ error: 'Modpack não encontrado.' });
     }
 
