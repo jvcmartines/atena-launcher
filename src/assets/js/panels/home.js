@@ -1114,6 +1114,36 @@ class Home {
         return escritos.length
     }
 
+    /**
+     * Roda uma tarefa longa, e só uma por vez.
+     *
+     * O botão volta a aparecer assim que um download é cancelado, e clicar de
+     * novo começava um segundo download por cima do primeiro — dois conjuntos
+     * de trabalhadores gravando na mesma pasta. A trava é marcada antes de
+     * qualquer `await`, senão dois cliques rápidos passariam os dois.
+     */
+    async executar(tarefa) {
+        if (this.ocupado) return
+        this.ocupado = true
+
+        try {
+            await tarefa()
+        } catch (err) {
+            // Desistir não é falha: quem apertou cancelar já sabe o que houve.
+            if (!err?.cancelado) this.falhouAoIniciar(err)
+        } finally {
+            this.ocupado = false
+        }
+    }
+
+    /** "1,6 GB" a partir de bytes. */
+    tamanhoCurto(bytes) {
+        let n = Number(bytes) || 0
+        if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`
+        if (n >= 1048576) return `${Math.round(n / 1048576)} MB`
+        return `${Math.max(1, Math.round(n / 1024))} KB`
+    }
+
     /* ------------------------------------------ a área de progresso ------ */
 
     /**

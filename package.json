@@ -2,7 +2,7 @@
     "name": "atena-launcher",
     "preductname": "Atena Launcher",
     "productName": "Atena Launcher",
-    "version": "1.6.0",
+    "version": "1.6.1",
     "description": "Launcher oficial do servidor Atena - Minecraft Forge 1.20.1",
     "main": "src/app.js",
     "author": {
@@ -21,7 +21,7 @@
         "server:install": "npm --prefix server install",
         "build:local": "node build.js --obf=false --publish=never --build=platform",
         "build:ci": "node build.js --obf=true --publish=always --build=platform",
-        "conferir": "node scripts/conferir-variaveis.js"
+        "conferir": "node scripts/conferir-variaveis.js && node scripts/conferir-metodos.js"
     },
     "license": "CCANC",
     "nodemonConfig": {
