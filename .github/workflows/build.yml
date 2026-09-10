@@ -71,6 +71,13 @@ jobs:
         run: npm ci
         shell: bash
 
+      # Pega variável usada e nunca declarada — erro que passa no parser e só
+      # explode quando a linha roda. Já quebrou a atualização do modpack uma
+      # vez; não pode virar release de novo.
+      - name: Conferir as variáveis do launcher
+        run: npm run conferir
+        shell: bash
+
       - name: Compilar e publicar
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

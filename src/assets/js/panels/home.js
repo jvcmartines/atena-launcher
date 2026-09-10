@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, showDiscordIdentity, news, suporte, presenca, registro } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -726,7 +726,7 @@ class Home {
         let versaoAnterior = modpack.readLocal(base, instance.name)?.version ?? null
 
         let ultimoBytes = 0
-        let ultimoInstante = inicio
+        let ultimoInstante = Date.now()
 
         try {
             let resultado = await modpack.sync(base, instance, {
