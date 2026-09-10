@@ -1,7 +1,11 @@
 <div class="home">
 
     <main class="hero">
-        <img class="brand-logo" src="assets/images/atena-logo.png" alt="Atena Launcher">
+        <!-- A logo sobe: no centro exato ela disputava atencao com o botao, e
+             os dois juntos empurravam o resto da tela para o rodape. -->
+        <div class="hero-top">
+            <img class="brand-logo" src="assets/images/atena-logo.png" alt="Atena Launcher">
+        </div>
 
         <!-- banido, ou sem nenhum modpack liberado: a razao aparece aqui -->
         <div class="blocked-box glass">
@@ -12,24 +16,48 @@
         <div class="play-elements">
             <div class="play-instance">
                 <button class="play-btn" data-i18n="home.play"></button>
-                <div class="pack-menu-btn icon-settings" data-i18n-title="home.pack_options"></div>
+                <div class="pack-menu-btn" data-i18n-title="home.pack_options">
+                    <span class="pack-menu-icon"></span>
+                </div>
             </div>
+
+            <!-- Entrar direto no servidor, sem passar pelo menu de multijogador.
+                 Estava escondido nas configuracoes; e uma decisao que se toma na
+                 hora de jogar, entao mora aqui. -->
+            <label class="autojoin">
+                <input type="checkbox" class="autojoin-input">
+                <span class="autojoin-switch"></span>
+                <span class="autojoin-text" data-i18n="home.autojoin"></span>
+            </label>
 
             <div class="info-starting-game">
                 <div class="info-starting-game-text" data-i18n="home.connecting"></div>
                 <progress value="0" max="0" class="progress-bar"></progress>
                 <div class="download-stats">
                     <span class="download-speed"></span>
-                    <!-- só aparece durante o download do modpack -->
-                    <button class="pause-btn" data-i18n="home.pause" hidden></button>
                     <span class="download-eta"></span>
+                </div>
+                <!-- Pausar e cancelar so aparecem durante o download do modpack. -->
+                <div class="download-actions">
+                    <button class="download-btn pause-btn" data-i18n="home.pause" hidden></button>
+                    <button class="download-btn cancel-btn" data-i18n="home.cancel" hidden></button>
                 </div>
             </div>
         </div>
+
+        <!-- O aviso mais recente da staff, a um clique da lista inteira. -->
+        <button class="news-strip" hidden>
+            <span class="news-strip-tag" data-i18n="news.tag"></span>
+            <span class="news-strip-title"></span>
+        </button>
     </main>
 
+    <!-- Barra escura: a imagem de fundo cobria a tela inteira e os botoes
+         flutuavam soltos em cima dela. Aqui eles ganham chao. -->
     <footer class="home-bottom">
-        <div class="account-chip">
+        <!-- O cartao do jogador virou botao: leva as contas, onde se troca e
+             se acrescenta. -->
+        <button class="account-chip" data-i18n-title="account.manage">
             <div class="head-wrap">
                 <div class="player-head"></div>
                 <img class="discord-badge" alt="">
@@ -38,42 +66,43 @@
                 <div class="player-line">
                     <span class="player-name" data-i18n="account.loading"></span>
                     <span class="staff-badge" data-i18n="account.staff"></span>
+                    <!-- Horas jogadas, vindas do mundo do servidor. Some quando
+                         o nick nunca entrou. -->
+                    <span class="player-hours" hidden></span>
                 </div>
                 <div class="player-type" data-i18n="account.connected"></div>
             </div>
-        </div>
+        </button>
 
         <div class="bottom-right">
-            <!-- avisos da staff; some quando não há nenhum -->
-            <div class="news-btn" data-i18n-title="news.title" hidden>
-                <div class="icon-news"></div>
-                <span class="news-dot" hidden></span>
-            </div>
-
-            <!-- a contagem saiu do meio da tela: virou um ponto no rodapé, que
-                 continua abrindo a lista de quem está jogando -->
             <div class="status-player-count" data-i18n-title="home.players_title">
                 <span class="pulse-dot"></span>
                 <span class="player-count">0</span>
                 <span class="players-label" data-i18n="home.players_label"></span>
             </div>
 
-            <!-- o IP saiu do meio da tela, mas continua a um clique -->
-            <div class="ip-row" data-i18n-title="home.ip_title">
-                <span class="server-ip">atenasmp.com</span>
-                <span class="ip-copy" data-i18n="home.ip_copy"></span>
+            <div class="bar-sep"></div>
+
+            <div class="bar-btn news-btn" data-i18n-title="news.title">
+                <span class="bar-icon ico-news"></span>
+                <span class="news-dot" hidden></span>
             </div>
 
-            <div class="social-list">
-                <div data-url="https://atenasmp.com" class="social-block" title="Site">
-                    <div class="icon-web icon-social"></div>
-                </div>
-                <div data-url="https://discord.gg/92cDk8rZKK" class="social-block" title="Discord">
-                    <div class="icon-discord icon-social"></div>
-                </div>
+            <div class="bar-btn support-btn" data-i18n-title="support.bar_title">
+                <span class="bar-icon ico-support"></span>
             </div>
 
-            <div class="settings-btn icon-settings" data-i18n-title="home.settings_title"></div>
+            <div class="bar-btn social-block" data-url="https://discord.gg/92cDk8rZKK" title="Discord">
+                <span class="bar-icon ico-discord-bar"></span>
+            </div>
+
+            <div class="bar-btn social-block" data-url="https://atenasmp.com" title="atenasmp.com">
+                <span class="bar-icon ico-web-bar"></span>
+            </div>
+
+            <div class="bar-btn settings-btn" data-i18n-title="home.settings_title">
+                <span class="bar-icon ico-gear"></span>
+            </div>
         </div>
     </footer>
 
@@ -83,6 +112,12 @@
             <div class="close-players icon-close"></div>
             <p data-i18n="home.players_title"></p>
             <div class="players-count-line"></div>
+            <!-- O IP saiu do rodape para a barra respirar, mas copiar continua
+                 a um clique - aqui, junto de quem esta online. -->
+            <div class="ip-row" data-i18n-title="home.ip_title">
+                <span class="server-ip">atenasmp.com</span>
+                <span class="ip-copy" data-i18n="home.ip_copy"></span>
+            </div>
             <div class="players-list content-scroll"></div>
         </div>
     </div>
@@ -134,6 +169,11 @@
                     <strong data-i18n="support.title"></strong>
                     <small data-i18n="support.text"></small>
                 </div>
+                <div class="pack-action" data-action="fps">
+                    <span class="pack-icon ico-fps"></span>
+                    <strong data-i18n="fps.title"></strong>
+                    <small data-i18n="fps.text"></small>
+                </div>
                 <!-- Apaga o modpack inteiro: fica por ultimo, e avisa pela cor. -->
                 <div class="pack-action danger" data-action="reinstall">
                     <span class="pack-icon ico-reinstall"></span>
@@ -150,6 +190,22 @@
             <div class="close-news icon-close"></div>
             <p data-i18n="news.title"></p>
             <div class="news-list content-scroll"></div>
+        </div>
+    </div>
+
+    <!-- FPS Boost: derruba as configuracoes graficas do modpack -->
+    <div class="fps-popup">
+        <div class="fps-tab glass">
+            <div class="close-fps icon-close"></div>
+            <p data-i18n="fps.title"></p>
+            <div class="fps-intro" data-i18n="fps.intro"></div>
+
+            <div class="fps-state">
+                <div class="fps-state-text"></div>
+                <button class="fps-toggle"></button>
+            </div>
+
+            <div class="fps-changes content-scroll"></div>
         </div>
     </div>
 

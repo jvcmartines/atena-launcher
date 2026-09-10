@@ -27,6 +27,7 @@ import registro from './utils/registro.js';
 import Pausa from './utils/pausa.js';
 import importar from './utils/importar.js';
 import extras from './utils/extras.js';
+import desempenho from './utils/desempenho.js';
 
 /**
  * Fundo de época.
@@ -315,5 +316,6 @@ export {
     registro as registro,
     Pausa as Pausa,
     importar as importar,
-    extras as extras
+    extras as extras,
+    desempenho as desempenho
 }

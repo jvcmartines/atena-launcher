@@ -1,30 +1,40 @@
 /**
- * Tela inicial: o meio da tela é só a logo e o botão de jogar. Tudo o mais —
- * quem está online, o IP, a conta, as configurações — vive no rodapé, a um
- * clique de distância mas fora do caminho.
+ * Tela inicial.
+ *
+ * A imagem de fundo ocupa a tela toda, e antes os botoes flutuavam soltos em
+ * cima dela — o olho nao sabia onde pousar. Agora a parte de baixo e uma barra
+ * escura de verdade: os controles ganham chao, e a imagem volta a ser fundo.
  */
 
 .home {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 10px 34px 24px;
 }
 
 /* --------------------------------------------------------------- hero -- */
 
 .hero {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 0;
+    padding: 0 34px;
     text-align: center;
 }
 
+/* So a logo sobe. E um transform de proposito: o espaco dela continua
+   reservado no fluxo, entao o botao de jogar fica exatamente onde estava.
+   Mudar o alinhamento subiria os dois juntos. */
+.hero-top {
+    transform: translateY(-6vh);
+}
+
 .brand-logo {
-    width: min(300px, 48vw);
+    width: min(290px, 46vw);
     filter: drop-shadow(0 12px 34px rgba(0, 0, 0, 0.6));
     animation: rise 0.7s var(--ease) backwards;
 }
@@ -108,13 +118,40 @@
     }
 }
 
-/* Engrenagem ao lado do botão: opções do modpack. */
+/* O clique acende o botao e ele se dissolve, em vez de sumir de um quadro
+   para o outro. Sao 260 ms: o bastante para o olho acompanhar, pouco o
+   suficiente para nao atrasar ninguem. */
+.play-instance.leaving {
+    animation: dissolver 0.26s var(--ease) forwards;
+    pointer-events: none;
+}
+
+@keyframes dissolver {
+    from {
+        opacity: 1;
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    45% {
+        filter: brightness(1.35);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(1.06);
+        filter: brightness(1.6);
+    }
+}
+
+/* Ao lado do botão: as opções do modpack. Deixou de ser uma engrenagem —
+   havia duas engrenagens iguais na tela, e a de baixo era as configurações
+   do launcher. */
 .pack-menu-btn {
     display: grid;
     place-items: center;
     width: 56px;
     flex-shrink: 0;
-    font-size: 16px;
     color: var(--color-dim);
     background: var(--glass);
     backdrop-filter: blur(18px);
@@ -125,10 +162,167 @@
     transition: var(--transition);
 }
 
+.pack-menu-icon {
+    width: 21px;
+    height: 21px;
+    background-color: currentColor;
+    pointer-events: none;
+    -webkit-mask: var(--ico-pack) no-repeat center / contain;
+    mask: var(--ico-pack) no-repeat center / contain;
+}
+
 .pack-menu-btn:hover {
     color: var(--gold);
     border-color: var(--stroke-strong);
 }
+
+/* ------------------------------------------- entrar direto no servidor - */
+
+.autojoin {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--color-dim);
+    cursor: pointer;
+    user-select: none;
+}
+
+.autojoin-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.autojoin-switch {
+    position: relative;
+    width: 34px;
+    height: 19px;
+    flex-shrink: 0;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    transition: var(--transition);
+}
+
+.autojoin-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    background: var(--color-faint);
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.autojoin-input:checked+.autojoin-switch {
+    background: linear-gradient(180deg, var(--gold-200), var(--gold-600));
+    border-color: transparent;
+}
+
+.autojoin-input:checked+.autojoin-switch::after {
+    left: 17px;
+    background: var(--wine-900);
+}
+
+.autojoin:hover .autojoin-text {
+    color: var(--color);
+}
+
+.autojoin-input:checked~.autojoin-text {
+    color: var(--gold);
+}
+
+/* ------------------------------------------------------- horas jogadas - */
+
+/* Ao lado do nick, que e onde o numero quer dizer alguma coisa: e o tempo
+   DAQUELA pessoa. No meio da tela ele so competia com o botao de jogar. */
+.player-hours {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    background: rgba(242, 199, 92, 0.12);
+    border: 1px solid rgba(242, 199, 92, 0.25);
+    border-radius: 999px;
+}
+
+.player-hours::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background-color: var(--gold);
+    -webkit-mask: var(--ico-clock) no-repeat center / contain;
+    mask: var(--ico-clock) no-repeat center / contain;
+}
+
+.player-hours[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------ aviso recente -- */
+
+/* O ultimo recado da staff, na propria tela inicial. Antes so existia atras
+   de um icone no rodape, e quem nao clicava nunca ficava sabendo. */
+.news-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    max-width: min(520px, 84vw);
+    padding: 9px 16px;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--color-dim);
+    text-align: left;
+    background: rgba(0, 0, 0, 0.34);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+    animation: rise 0.7s 0.5s var(--ease) backwards;
+}
+
+.news-strip:hover {
+    color: var(--color);
+    border-color: var(--stroke-strong);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.news-strip[hidden] {
+    display: none;
+}
+
+.news-strip-tag {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: var(--gold);
+    border-radius: 999px;
+}
+
+.news-strip-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --------------------------------------------------------- download --- */
 
 .info-starting-game {
     display: none;
@@ -162,28 +356,102 @@
     transition: width 0.25s var(--ease);
 }
 
+.download-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: var(--color-faint);
+}
+
+/* Pausar era um comprimido de 10 px espremido entre a velocidade e o tempo
+   restante — dava para nao ver. Agora sao dois botoes de verdade, embaixo da
+   barra, do tamanho de algo que se aperta. */
+.download-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.download-btn {
+    flex: 1;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--color-dim);
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.download-btn:hover {
+    color: var(--gold);
+    border-color: var(--stroke-strong);
+}
+
+.download-btn[hidden] {
+    display: none;
+}
+
+/* Pausado: o botao vira o convite para continuar. */
+.pause-btn.paused {
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
+    border-color: transparent;
+}
+
+.cancel-btn:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
 /* ------------------------------------------------------------ rodapé --- */
 
+/* A barra. E o unico lugar da tela com fundo proprio: e o que separa os
+   controles da paisagem. */
 .home-bottom {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-shrink: 0;
-    padding-top: 16px;
+    padding: 10px 20px;
+    background: rgba(9, 2, 5, 0.88);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
     border-top: 1px solid var(--stroke);
 }
 
+/* O cartao do jogador virou botao: leva as contas, onde se troca e se
+   acrescenta. */
 .account-chip {
     display: flex;
     align-items: center;
     gap: 11px;
     min-width: 0;
+    padding: 6px 12px 6px 6px;
+    font-family: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.account-chip:hover {
+    background: var(--background-element);
+    border-color: var(--stroke);
 }
 
 .player-head {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
     border-radius: 10px;
     background-color: var(--background-element);
@@ -216,59 +484,76 @@
 .bottom-right {
     display: flex;
     align-items: center;
-    gap: 14px;
-}
-
-.social-list {
-    display: flex;
     gap: 8px;
 }
 
-.social-block {
+.bar-sep {
+    width: 1px;
+    height: 22px;
+    margin: 0 4px;
+    background: var(--stroke);
+}
+
+/* Todos os botoes da barra sao iguais: mesmo tamanho, mesmo tratamento. */
+.bar-btn {
+    position: relative;
     display: grid;
     place-items: center;
     width: 36px;
     height: 36px;
-    background: var(--glass);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--stroke);
-    border-radius: 11px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.social-block:hover {
-    border-color: var(--stroke-strong);
-    background: var(--glass-hover);
-    transform: translateY(-3px);
-}
-
-.icon-social {
-    width: 16px;
-    height: 16px;
-    background-repeat: no-repeat;
-    background-position: center;
-    filter: var(--svg-color);
-    pointer-events: none;
-}
-
-.settings-btn {
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    font-size: 15px;
     color: var(--color-dim);
-    border: 1px solid var(--stroke);
+    background: transparent;
+    border: 1px solid transparent;
     border-radius: 11px;
     cursor: pointer;
     transition: var(--transition);
 }
 
-.settings-btn:hover {
+.bar-btn:hover {
     color: var(--gold);
-    border-color: var(--stroke-strong);
+    background: var(--background-element);
+    border-color: var(--stroke);
+}
+
+.bar-icon {
+    width: 17px;
+    height: 17px;
+    background-color: currentColor;
+    pointer-events: none;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.ico-news {
+    -webkit-mask-image: url('../../images/svgs/news.svg');
+    mask-image: url('../../images/svgs/news.svg');
+}
+
+.ico-discord-bar {
+    -webkit-mask-image: url('../../images/svgs/discord.svg');
+    mask-image: url('../../images/svgs/discord.svg');
+}
+
+.ico-web-bar {
+    -webkit-mask-image: url('../../images/svgs/web.svg');
+    mask-image: url('../../images/svgs/web.svg');
+}
+
+.ico-support {
+    -webkit-mask-image: var(--ico-support);
+    mask-image: var(--ico-support);
+}
+
+.ico-gear {
+    -webkit-mask-image: var(--ico-gear);
+    mask-image: var(--ico-gear);
+}
+
+.settings-btn:hover .ico-gear {
     transform: rotate(45deg);
 }
 
@@ -446,11 +731,11 @@
     transform: scale(1.08);
 }
 
-/* Reinstalar apaga o modpack inteiro. Fica por ultimo, ocupa a largura toda
-   para nao ser clicado por engano no lugar do vizinho, e avisa pela cor. */
-.pack-action.danger {
-    grid-column: 1 / -1;
-}
+/* Reinstalar apaga o modpack inteiro. Fica por ultimo e avisa pela cor.
+   Ocupava a largura toda, mas com oito acoes isso custava uma linha inteira e
+   o menu voltava a rolar — e menu que rola esconde a ultima opcao, que foi o
+   problema que a grade veio resolver. Quem clica sem querer ainda encontra a
+   confirmacao. */
 
 .pack-action.danger .pack-icon {
     background-color: var(--danger);
@@ -494,6 +779,11 @@
 .ico-reinstall {
     -webkit-mask-image: var(--ico-reinstall);
     mask-image: var(--ico-reinstall);
+}
+
+.ico-fps {
+    -webkit-mask-image: var(--ico-fps);
+    mask-image: var(--ico-fps);
 }
 
 /* Tela baixa: uma coluna so, senao os quadrados ficam altos demais. */
@@ -819,35 +1109,8 @@
 
 /* ------------------------------------------------- avisos da staff ----- */
 
-.news-btn {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    background: var(--glass);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--stroke);
-    border-radius: 11px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.news-btn:hover {
-    border-color: var(--stroke-strong);
-    background: var(--glass-hover);
-}
-
-.news-btn .icon-news {
-    width: 17px;
-    height: 17px;
-    background-repeat: no-repeat;
-    background-position: center;
-    filter: var(--svg-color);
-    pointer-events: none;
-}
-
+/* O botao de avisos agora e um .bar-btn como os outros; o que sobra aqui e
+   so o que e dele: o ponto de nao-lido. */
 /* Ponto dourado enquanto houver aviso que esta pessoa ainda não abriu. */
 .news-dot {
     position: absolute;
@@ -1205,4 +1468,172 @@
     color: var(--color-faint);
     overflow-wrap: anywhere;
     pointer-events: none;
+}
+
+/* ------------------------------------------------------- FPS Boost ----- */
+
+.fps-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #000000b3;
+    backdrop-filter: blur(6px);
+}
+
+.fps-tab {
+    position: relative;
+    width: min(470px, 88vw);
+    max-height: 82vh;
+    padding: 24px;
+    animation: pop-in 0.3s var(--ease);
+}
+
+.fps-tab > p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.fps-intro {
+    margin-bottom: 16px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--color-faint);
+}
+
+.close-fps {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    color: var(--color-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.close-fps:hover {
+    color: var(--danger);
+    background: var(--background-element);
+}
+
+/* Ligado ou desligado, e o botao que troca: a primeira coisa que se ve. */
+.fps-state {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+}
+
+.fps-state-text {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-dim);
+}
+
+.fps-state-text b {
+    color: var(--gold);
+}
+
+.fps-toggle {
+    flex-shrink: 0;
+    min-width: 92px;
+    padding: 9px 15px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.fps-toggle:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+/* Ligado: o botao passa a ser o de desligar, e para de gritar. */
+.fps-toggle.on {
+    color: var(--color-dim);
+    background: transparent;
+    border-color: var(--stroke);
+}
+
+.fps-toggle.on:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.fps-toggle:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* A lista do que muda. Um botao que mexe em quinze configuracoes sem dizer
+   quais e um botao em que ninguem deveria confiar. */
+.fps-changes {
+    display: flex;
+    flex-direction: column;
+    max-height: 42vh;
+    padding-right: 6px;
+}
+
+.fps-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 2px;
+    font-size: 11.5px;
+    border-bottom: 1px solid var(--stroke);
+}
+
+.fps-row:last-child {
+    border-bottom: none;
+}
+
+.fps-label {
+    color: var(--color-dim);
+}
+
+.fps-values {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--color-faint);
+}
+
+.fps-values i {
+    font-style: normal;
+    color: var(--stroke-strong);
+}
+
+/* Ja aplicado: o valor de destino fica dourado, para a lista mostrar de
+   relance o que esta em vigor. */
+.fps-row.done .fps-values {
+    color: var(--gold);
+}
+
+/* O IP mudou de lugar: agora mora no popup de quem esta jogando. */
+.players-tab .ip-row {
+    margin: 4px 0 14px;
 }

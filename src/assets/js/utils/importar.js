@@ -257,6 +257,8 @@ class Importar {
         // Quanto há para conferir: serve só para a barra ter um fim.
         const total = arquivos.length;
 
+        let cancelado = false;
+
         for (const arquivo of arquivos) {
             conferidos += 1;
 
@@ -264,7 +266,18 @@ class Importar {
             // ao navegador de vez em quando, a tela congela do início ao fim.
             if (conferidos % 25 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 0));
-                if (pausa) await pausa.esperar();
+
+                // Desistir no meio não desfaz nada: o que já foi copiado está
+                // certo e conferido, e o resto vira download normal depois.
+                if (pausa) {
+                    try {
+                        await pausa.esperar();
+                    } catch (err) {
+                        if (!err?.cancelado) throw err;
+                        cancelado = true;
+                        break;
+                    }
+                }
             }
             if (aoProgresso) {
                 aoProgresso({ feitos: conferidos, total, copiados, bytes, arquivo: arquivo.path });
@@ -294,8 +307,8 @@ class Importar {
             }
         }
 
-        if (aoProgresso) aoProgresso({ feitos: total, total, copiados, bytes, arquivo: '' });
-        return { copiados, bytes, faltando, hashes };
+        if (aoProgresso) aoProgresso({ feitos: conferidos, total, copiados, bytes, arquivo: '' });
+        return { copiados, bytes, faltando, hashes, cancelado };
     }
 
     /**

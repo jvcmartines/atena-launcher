@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -37,6 +37,11 @@ class Home {
         this.changelogPopup()
         this.extrasPopup()
         this.importPopup()
+        this.fpsPopup()
+        this.autoJoin()
+        this.mostrarHoras()
+        this.contaBotao()
+        this.suporteBotao()
         this.richPresence()
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
@@ -287,6 +292,15 @@ class Home {
         let ponto = document.querySelector('.news-dot')
         if (ponto) ponto.hidden = maisNovo <= lido
 
+        // O aviso mais recente aparece na propria tela inicial. Atras de um
+        // icone no rodape, quem nao clicava nunca ficava sabendo de nada.
+        let faixa = document.querySelector('.news-strip')
+        if (faixa) {
+            faixa.querySelector('.news-strip-title').textContent = avisos[0].title
+            faixa.hidden = false
+            faixa.addEventListener('click', () => botao.click())
+        }
+
         document.querySelector('.news-list').innerHTML = avisos.map(aviso => `
             <article class="news-item">
                 <h4>${this.escapar(aviso.title)}</h4>
@@ -500,6 +514,7 @@ class Home {
 
         if (action === 'repair') return this.repairPack(instance, base)
         if (action === 'report') return this.reportProblem(instance, base)
+        if (action === 'fps') return this.showFps(instance, base)
         if (action === 'extras') return this.showExtras(instance, base)
         if (action === 'import') return this.showImport(instance, base)
 
@@ -541,14 +556,10 @@ class Home {
     async repairPack(instance, base) {
         document.querySelector('.instance-popup').style.display = 'none'
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoBox = document.querySelector('.info-starting-game')
         let infoText = document.querySelector('.info-starting-game-text')
         let progressBar = document.querySelector('.progress-bar')
 
-        playInstanceBTN.style.display = 'none'
-        infoBox.style.display = 'block'
-        progressBar.style.display = ''
+        await this.entrarEmProgresso()
 
         let resultado
         try {
@@ -570,10 +581,7 @@ class Home {
             resultado = null
         }
 
-        infoBox.style.display = 'none'
-        playInstanceBTN.style.display = 'flex'
-        progressBar.value = 0
-
+        this.sairDoProgresso()
         await this.refreshState(instance)
 
         let quebrados = (resultado?.broken || 0) + (resultado?.missing || 0)
@@ -682,6 +690,191 @@ class Home {
         return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
     }
 
+    /* -------------------------------------------- entrar direto ---------- */
+
+    /**
+     * "Entrar no servidor automaticamente", embaixo do botão de jogar.
+     *
+     * A opção já existia, escondida nas configurações. Mas é uma decisão que
+     * se toma na hora de jogar — hoje quero entrar direto, hoje quero abrir o
+     * mundo single-player — e não algo que se configura uma vez na vida. Por
+     * isso ela subiu para cá; as duas telas escrevem o mesmo valor.
+     */
+    async autoJoin() {
+        let campo = document.querySelector('.autojoin-input')
+        if (!campo) return
+
+        let config = await this.db.readData('configClient')
+        campo.checked = config?.launcher_config?.quickPlay !== false
+
+        campo.addEventListener('change', async () => {
+            let config = await this.db.readData('configClient')
+            config.launcher_config.quickPlay = campo.checked
+            await this.db.updateData('configClient', config)
+        })
+    }
+
+    /* ---------------------------------------------- horas jogadas -------- */
+
+    /**
+     * Quantas horas este nick já jogou no Atena.
+     *
+     * Os números saem do mundo do servidor — o mesmo lugar de onde o site tira
+     * o ranking. Quem nunca entrou não tem linha lá, e aí a faixa simplesmente
+     * não aparece: melhor do que mostrar "0h" para quem está chegando agora.
+     *
+     * Nada disso é essencial para jogar, então qualquer falha é silenciosa.
+     */
+    async mostrarHoras() {
+        let selo = document.querySelector('.player-hours')
+        if (!selo) return
+
+        try {
+            let configClient = await this.db.readData('configClient')
+            let conta = await this.db.readData('accounts', configClient?.account_selected)
+            if (!conta?.name) return
+
+            let resposta = await fetch(`https://atenasmp.com/api/jogador?nick=${encodeURIComponent(conta.name)}`)
+            if (!resposta.ok) return
+
+            let dados = await resposta.json()
+            if (!dados?.horas) return
+
+            selo.textContent = lang.t('home.playtime', { hours: Math.round(dados.horas) })
+            // A posicao no ranking cabe no titulo: no selo ela deixaria a
+            // barra apertada, e nao e o numero que a pessoa procura ali.
+            selo.title = lang.t('home.playtime_rank', { position: dados.posicao, total: dados.de })
+            selo.hidden = false
+        } catch (err) {
+            console.error('[horas] não consegui buscar:', err.message)
+        }
+    }
+
+    /* ------------------------------------------------- barra de baixo ---- */
+
+    /** O cartão do jogador leva às contas, que é onde se troca e se acrescenta. */
+    contaBotao() {
+        let chip = document.querySelector('.account-chip')
+        if (!chip) return
+
+        chip.addEventListener('click', () => {
+            changePanel('settings')
+            // As configurações abrem na aba que estava aberta da última vez;
+            // quem clicou no próprio nick quer as contas.
+            document.querySelector('#account')?.click()
+        })
+    }
+
+    /** Suporte: o mesmo relatório do menu do modpack, a um clique da barra. */
+    suporteBotao() {
+        document.querySelector('.support-btn')?.addEventListener('click', async () => {
+            let instance = await this.currentInstance()
+            if (!instance) return
+            this.reportProblem(instance, await this.basePath())
+        })
+    }
+
+    /* ----------------------------------------------------- FPS Boost ----- */
+
+    fpsPopup() {
+        let caixa = document.querySelector('.fps-popup')
+        if (!caixa) return
+
+        let fechar = () => caixa.style.display = 'none'
+        document.querySelector('.close-fps').addEventListener('click', fechar)
+        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
+    }
+
+    /**
+     * Derruba as configurações gráficas do modpack para o mínimo.
+     *
+     * A tela mostra item por item o que vai mudar, com o valor de agora e o de
+     * depois. Um botão que mexe em quinze configurações do jogo sem dizer
+     * quais é um botão em que ninguém deveria confiar.
+     */
+    async showFps(instance, base) {
+        document.querySelector('.instance-popup').style.display = 'none'
+
+        let caixa = document.querySelector('.fps-popup')
+        let lista = document.querySelector('.fps-changes')
+        caixa.style.display = 'flex'
+        lista.innerHTML = ''
+
+        await this.desenharFps(instance, base)
+    }
+
+    async desenharFps(instance, base) {
+        let pasta = modpack.dir(base, instance.name)
+        let estado = await desempenho.estado(pasta)
+
+        let texto = document.querySelector('.fps-state-text')
+        let botao = document.querySelector('.fps-toggle')
+        let lista = document.querySelector('.fps-changes')
+
+        if (!estado.possivel) {
+            // Antes da primeira partida o Minecraft ainda não escreveu nada.
+            texto.textContent = lang.t('fps.not_yet')
+            botao.hidden = true
+            lista.innerHTML = ''
+            return
+        }
+
+        botao.hidden = false
+        texto.innerHTML = lang.t(estado.ligado ? 'fps.on' : 'fps.off')
+        botao.textContent = lang.t(estado.ligado ? 'fps.turn_off' : 'fps.turn_on')
+        botao.classList.toggle('on', estado.ligado)
+
+        lista.innerHTML = estado.mudancas.map(m => `
+            <div class="fps-row${m.aplicado ? ' done' : ''}">
+                <span class="fps-label">${lang.t(m.rotulo)}</span>
+                <span class="fps-values">${this.escapar(m.atual)} <i>→</i> ${this.escapar(m.alvo)}</span>
+            </div>`).join('')
+
+        botao.onclick = () => this.alternarFps(instance, base, estado.ligado)
+    }
+
+    async alternarFps(instance, base, estavaLigado) {
+        let botao = document.querySelector('.fps-toggle')
+        botao.disabled = true
+
+        try {
+            let pasta = modpack.dir(base, instance.name)
+            if (estavaLigado) await desempenho.desligar(pasta)
+            else await desempenho.ligar(pasta)
+        } catch (err) {
+            console.error('[fps] falhou:', err)
+            new popup().openPopup({
+                title: lang.t('fps.title'),
+                content: lang.t('fps.failed'),
+                color: 'red',
+                options: true
+            })
+        } finally {
+            botao.disabled = false
+            await this.desenharFps(instance, base)
+        }
+    }
+
+    /* --------------------------------------------- a saída do botão ------ */
+
+    /**
+     * O botão de jogar se dissolve antes de a barra aparecer.
+     *
+     * Sem isso a troca acontece de um quadro para o outro, e num clique que
+     * pode demorar a responder essa piscada é a única confirmação de que o
+     * clique foi registrado.
+     */
+    animarSaida() {
+        let alvo = document.querySelector('.play-instance')
+        if (!alvo) return Promise.resolve()
+
+        alvo.classList.add('leaving')
+        return new Promise(seguir => setTimeout(() => {
+            alvo.classList.remove('leaving')
+            seguir()
+        }, 260))
+    }
+
     /* ---------------------------------------------- mods opcionais ------ */
 
     extrasPopup() {
@@ -694,14 +887,12 @@ class Home {
     }
 
     /**
-     * Lista os mods que a pessoa pode ligar por conta própria — hoje, o
-     * Essential.
+     * Lista os mods que a pessoa pode ligar e desligar por conta própria.
      *
-     * Cada linha tem um botão que instala ou remove na hora. Não existe
-     * "jogar com" e "jogar sem": o mod fica em mods/, e é isso. Um botão que
-     * enfiasse e tirasse 50 MB do disco a cada partida seria mais lento que a
-     * própria partida, e a primeira queda de internet deixaria a pasta pela
-     * metade.
+     * O Essential já vem dentro do modpack do Atena, então aqui ele aparece
+     * como uma chave: ligado por padrão, e desligável. Desligar na mão não
+     * funcionaria — o arquivo está no manifesto, e o próximo Jogar o traria de
+     * volta. É exatamente por isso que isto precisa existir no launcher.
      */
     async showExtras(instance, base) {
         document.querySelector('.instance-popup').style.display = 'none'
@@ -737,9 +928,9 @@ class Home {
                 this.alternarExtra(instance, base, item, linha)
             })
 
-            // A versão publicada vem da internet: quando chega, entra na linha.
-            // Chegando ou não, o botão já funciona.
-            if (!item.instalado && item.disponivel) {
+            // A versão publicada vem da internet; só interessa para quem ainda
+            // não tem o arquivo. Chegando ou não, o botão já funciona.
+            if (item.ausente && item.disponivel) {
                 extras.versaoRemota(item.id, item.plataforma).then(versao => {
                     if (!versao) return
                     item.versaoRemota = versao
@@ -758,61 +949,50 @@ class Home {
 
         if (!item.disponivel) {
             meta.textContent = lang.t('extras.unsupported')
-            botao.textContent = lang.t('extras.install')
+            botao.textContent = lang.t('extras.turn_on')
             botao.disabled = true
             return
         }
 
         botao.disabled = false
-        linha.classList.toggle('installed', item.instalado)
+        linha.classList.toggle('installed', item.ligado)
 
-        if (item.instalado) {
-            meta.textContent = [
-                lang.t('extras.on'),
-                item.versao ? `v${item.versao}` : null,
-                item.tamanho ? this.tamanhoCurto(item.tamanho) : null
-            ].filter(Boolean).join(' · ')
-            botao.textContent = lang.t('extras.remove')
-        } else {
-            meta.textContent = [
-                lang.t('extras.off'),
-                item.versaoRemota ? `v${item.versaoRemota}` : null
-            ].filter(Boolean).join(' · ')
-            botao.textContent = lang.t('extras.install')
-        }
+        let detalhes = [
+            lang.t(item.ligado ? 'extras.on' : item.ausente ? 'extras.absent' : 'extras.off'),
+            // Um mod do pack não tem "versão" própria: ele acompanha o modpack.
+            item.modo === 'pack' ? lang.t('extras.from_pack') : (item.versao || item.versaoRemota ? `v${item.versao || item.versaoRemota}` : null),
+            item.tamanho ? this.tamanhoCurto(item.tamanho) : null
+        ]
+
+        meta.textContent = detalhes.filter(Boolean).join(' · ')
+        botao.textContent = lang.t(item.ligado ? 'extras.turn_off' : item.ausente ? 'extras.install' : 'extras.turn_on')
     }
 
-    /** Liga ou desliga o mod, com a porcentagem no próprio botão. */
+    /** Liga ou desliga o mod, com a porcentagem no próprio botão se precisar baixar. */
     async alternarExtra(instance, base, item, linha) {
         let botao = linha.querySelector('.extra-toggle')
         botao.disabled = true
 
         try {
-            if (item.instalado) {
-                await extras.remover(base, instance, item.id)
-                item.instalado = false
-                item.tamanho = 0
-                item.versao = null
-            } else {
-                botao.textContent = '0%'
-                let feito = await extras.instalar(base, instance, item.id, ({ bytes, bytesTotais }) => {
-                    // O download é de 50 MB: repintar a cada pedaço custaria
-                    // mais que o próprio download.
-                    let agora = Date.now()
-                    if (agora - (this.ultimoExtra || 0) < 120) return
-                    this.ultimoExtra = agora
-                    botao.textContent = bytesTotais
-                        ? `${((bytes / bytesTotais) * 100).toFixed(0)}%`
-                        : this.tamanhoCurto(bytes)
-                })
+            let feito = await extras.alternar(base, instance, item.id, !item.ligado, ({ bytes, bytesTotais }) => {
+                // 50 MB: repintar a cada pedaço custaria mais que o download.
+                let agora = Date.now()
+                if (agora - (this.ultimoExtra || 0) < 120) return
+                this.ultimoExtra = agora
+                botao.textContent = bytesTotais
+                    ? `${((bytes / bytesTotais) * 100).toFixed(0)}%`
+                    : this.tamanhoCurto(bytes)
+            })
 
-                item.instalado = true
-                item.tamanho = feito.bytes
-                item.versao = feito.versao
-            }
+            item.ligado = feito.acao !== 'desligado'
+            if (feito.bytes) { item.tamanho = feito.bytes; item.ausente = false }
         } catch (err) {
             console.error('[extras] falhou:', err)
-            let motivo = { 'sem-versao': 'extras.no_build', 'sem-plataforma': 'extras.no_build', checksum: 'extras.checksum' }[err.message]
+            let motivo = {
+                'sem-versao': 'extras.no_build',
+                'sem-plataforma': 'extras.no_build',
+                checksum: 'extras.checksum'
+            }[err.message]
 
             new popup().openPopup({
                 title: lang.t('extras.title'),
@@ -923,33 +1103,15 @@ class Home {
             instance.url, configClient?.launcher_config?.protected || []
         )
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoBox = document.querySelector('.info-starting-game')
         let infoText = document.querySelector('.info-starting-game-text')
         let progressBar = document.querySelector('.progress-bar')
         let speedElement = document.querySelector('.download-speed')
-        let etaElement = document.querySelector('.download-eta')
-        let pauseBTN = document.querySelector('.pause-btn')
 
-        playInstanceBTN.style.display = 'none'
-        infoBox.style.display = 'block'
-        progressBar.style.display = ''
-        progressBar.value = 0
-        ipcRenderer.send('main-window-progress-load')
+        await this.entrarEmProgresso()
 
         let pausa = new Pausa()
         this.pausaAtual = pausa
-
-        if (pauseBTN) {
-            pauseBTN.hidden = false
-            pauseBTN.textContent = lang.t('home.pause')
-            pauseBTN.onclick = () => {
-                let pausado = pausa.alternar()
-                pauseBTN.textContent = lang.t(pausado ? 'home.resume' : 'home.pause')
-                pauseBTN.classList.toggle('paused', pausado)
-                if (pausado) infoText.innerHTML = lang.t('home.paused')
-            }
-        }
+        let soltarControles = this.ligarControles(pausa, infoText)
 
         try {
             let resultado = await importar.importar({
@@ -985,30 +1147,21 @@ class Home {
 
             new popup().openPopup({
                 title: lang.t('import.title'),
-                content: resultado.copiados
-                    ? lang.t('import.done', {
-                        count: resultado.copiados,
-                        size: this.tamanhoCurto(resultado.bytes),
-                        missing: resultado.faltando
-                    })
-                    : lang.t('import.empty'),
+                content: resultado.cancelado
+                    ? lang.t('import.cancelled', { count: resultado.copiados })
+                    : resultado.copiados
+                        ? lang.t('import.done', {
+                            count: resultado.copiados,
+                            size: this.tamanhoCurto(resultado.bytes),
+                            missing: resultado.faltando
+                        })
+                        : lang.t('import.empty'),
                 color: resultado.copiados ? 'var(--success)' : 'var(--gold)',
                 options: true
             })
         } finally {
-            infoBox.style.display = 'none'
-            playInstanceBTN.style.display = 'flex'
-            progressBar.value = 0
-            if (speedElement) speedElement.textContent = ''
-            if (etaElement) etaElement.textContent = ''
-            if (pauseBTN) {
-                pauseBTN.hidden = true
-                pauseBTN.classList.remove('paused')
-                pauseBTN.onclick = null
-            }
-            pausa.reiniciar()
-            this.pausaAtual = null
-            ipcRenderer.send('main-window-progress-reset')
+            soltarControles()
+            this.sairDoProgresso()
         }
     }
 
@@ -1018,6 +1171,112 @@ class Home {
         if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`
         if (n >= 1048576) return `${Math.round(n / 1048576)} MB`
         return `${Math.max(1, Math.round(n / 1024))} KB`
+    }
+
+    /* ------------------------------------------ a área de progresso ------ */
+
+    /**
+     * Troca o botão de jogar pela barra de progresso.
+     *
+     * Estava copiado em quatro lugares — atualizar, reparar, importar e jogar —
+     * e cada cópia esquecia de esconder uma coisa diferente. Aqui é um lugar só,
+     * e a animação de saída do botão vem junto de graça.
+     */
+    async entrarEmProgresso({ animar = true } = {}) {
+        if (animar) await this.animarSaida()
+
+        for (let seletor of ['.play-instance', '.autojoin', '.news-strip']) {
+            let elemento = document.querySelector(seletor)
+            if (elemento) elemento.style.display = 'none'
+        }
+
+        let infoBox = document.querySelector('.info-starting-game')
+        let progressBar = document.querySelector('.progress-bar')
+
+        infoBox.style.display = 'block'
+        progressBar.style.display = ''
+        progressBar.value = 0
+        ipcRenderer.send('main-window-progress-load')
+    }
+
+    /** Devolve a tela ao repouso. Roda em `finally`: erro ou não, o botão volta. */
+    sairDoProgresso() {
+        let infoBox = document.querySelector('.info-starting-game')
+        if (infoBox) infoBox.style.display = 'none'
+
+        let play = document.querySelector('.play-instance')
+        if (play) play.style.display = 'flex'
+
+        for (let seletor of ['.autojoin', '.news-strip']) {
+            let elemento = document.querySelector(seletor)
+            // Só devolve o que estava lá antes: a faixa de avisos e as horas
+            // podem nunca ter aparecido.
+            if (elemento && !elemento.hidden) elemento.style.display = ''
+        }
+
+        let progressBar = document.querySelector('.progress-bar')
+        if (progressBar) progressBar.value = 0
+
+        for (let seletor of ['.download-speed', '.download-eta']) {
+            let elemento = document.querySelector(seletor)
+            if (elemento) elemento.textContent = ''
+        }
+
+        ipcRenderer.send('main-window-progress-reset')
+    }
+
+    /**
+     * Liga os botões de pausar e cancelar a uma tarefa.
+     *
+     * Devolve a função que os desliga — chamar no `finally`, senão o botão
+     * continua ligado à tarefa antiga e o clique seguinte pausa um download
+     * que já acabou.
+     */
+    ligarControles(pausa, infoText) {
+        let pauseBTN = document.querySelector('.pause-btn')
+        let cancelBTN = document.querySelector('.cancel-btn')
+
+        if (pauseBTN) {
+            pauseBTN.hidden = false
+            pauseBTN.textContent = lang.t('home.pause')
+            pauseBTN.classList.remove('paused')
+            pauseBTN.onclick = () => {
+                let pausado = pausa.alternar()
+                pauseBTN.textContent = lang.t(pausado ? 'home.resume' : 'home.pause')
+                pauseBTN.classList.toggle('paused', pausado)
+
+                if (pausado) {
+                    infoText.innerHTML = lang.t('home.paused')
+                    for (let seletor of ['.download-speed', '.download-eta']) {
+                        let elemento = document.querySelector(seletor)
+                        if (elemento) elemento.textContent = ''
+                    }
+                    ipcRenderer.send('main-window-progress-reset')
+                }
+            }
+        }
+
+        if (cancelBTN) {
+            cancelBTN.hidden = false
+            cancelBTN.textContent = lang.t('home.cancel')
+            cancelBTN.onclick = () => {
+                cancelBTN.disabled = true
+                infoText.innerHTML = lang.t('home.cancelling')
+                pausa.cancelar()
+            }
+        }
+
+        return () => {
+            for (let botao of [pauseBTN, cancelBTN]) {
+                if (!botao) continue
+                botao.hidden = true
+                botao.disabled = false
+                botao.onclick = null
+                botao.classList.remove('paused')
+            }
+            pausa.reiniciar()
+            this.pausaAtual = null
+        }
     }
 
     /* ------------------------------------------- instalar / atualizar ---- */
@@ -1036,48 +1295,36 @@ class Home {
         let base = await this.basePath()
         let configClient = await this.db.readData('configClient')
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoBox = document.querySelector('.info-starting-game')
         let infoText = document.querySelector('.info-starting-game-text')
         let progressBar = document.querySelector('.progress-bar')
         let speedElement = document.querySelector('.download-speed')
         let etaElement = document.querySelector('.download-eta')
-        let pauseBTN = document.querySelector('.pause-btn')
 
-        playInstanceBTN.style.display = 'none'
-        infoBox.style.display = 'block'
-        progressBar.style.display = ''
-        progressBar.value = 0
-        ipcRenderer.send('main-window-progress-load')
+        await this.entrarEmProgresso()
 
-        // Pausar é cooperativo: o download para entre um arquivo e outro, então
-        // nada fica pela metade e nada é rebaixado ao retomar.
+        // Pausar e cancelar são cooperativos: o download para entre um arquivo
+        // e outro, então nada fica pela metade e nada é rebaixado depois.
         let pausa = new Pausa()
         this.pausaAtual = pausa
-
-        if (pauseBTN) {
-            pauseBTN.hidden = false
-            pauseBTN.textContent = lang.t('home.pause')
-            pauseBTN.onclick = () => {
-                let pausado = pausa.alternar()
-                pauseBTN.textContent = lang.t(pausado ? 'home.resume' : 'home.pause')
-                pauseBTN.classList.toggle('paused', pausado)
-
-                if (pausado) {
-                    infoText.innerHTML = lang.t('home.paused')
-                    if (speedElement) speedElement.textContent = ''
-                    if (etaElement) etaElement.textContent = ''
-                    ipcRenderer.send('main-window-progress-reset')
-                }
-            }
-        }
+        let soltarControles = this.ligarControles(pausa, infoText)
 
         // Antes de mexer nos arquivos, guarda uma cópia das pastas do jogador.
         // Na primeira instalação não há nada para guardar.
         if (instance.backup?.length && this.packState !== 'install') {
             infoText.innerHTML = lang.t('home.backup')
             try {
-                await backup.run(base, instance.name, instance.backup)
+                await backup.run(base, instance.name, instance.backup, (feitos, total) => {
+                    // São milhares de arquivos: sem número, isto parecia travado.
+                    let agora = Date.now()
+                    if (feitos !== total && agora - (this.ultimoDesenho || 0) < 120) return
+                    this.ultimoDesenho = agora
+
+                    infoText.innerHTML = lang.t('home.backup_progress', {
+                        percent: ((feitos / Math.max(1, total)) * 100).toFixed(0)
+                    })
+                    progressBar.value = feitos
+                    progressBar.max = total
+                })
             } catch (err) {
                 console.error('[backup] falhou, seguindo mesmo assim:', err)
             }
@@ -1089,6 +1336,10 @@ class Home {
         // A versão que estava aqui antes: é a partir dela que o changelog
         // conta o que a pessoa perdeu.
         let versaoAnterior = modpack.readLocal(base, instance.name)?.version ?? null
+
+        // Guardado antes: depois do sync o estado ja mudou, e o aviso de
+        // cancelamento precisa saber se era instalacao ou atualizacao.
+        let anteriorAoSync = this.packState
 
         let ultimoBytes = 0
         let ultimoInstante = Date.now()
@@ -1152,7 +1403,7 @@ class Home {
                 })
             }
 
-            let anterior = this.packState
+            let anterior = anteriorAoSync
             await this.refreshState(instance)
 
             if (resultado.falhas?.length) {
@@ -1173,20 +1424,20 @@ class Home {
 
             // Atualizou de verdade? Conta o que mudou.
             if (anterior === 'update' && versaoAnterior !== null) await this.showChangelog(instance, versaoAnterior)
+        } catch (err) {
+            // Desistir não é falha: quem apertou cancelar já sabe o que houve.
+            if (!err?.cancelado) throw err
+
+            await this.refreshState(instance)
+            new popup().openPopup({
+                title: lang.t(anteriorAoSync === 'install' ? 'home.install' : 'home.update'),
+                content: lang.t('home.cancelled'),
+                color: 'var(--gold)',
+                options: true
+            })
         } finally {
-            infoBox.style.display = 'none'
-            playInstanceBTN.style.display = 'flex'
-            progressBar.value = 0
-            if (speedElement) speedElement.textContent = ''
-            if (etaElement) etaElement.textContent = ''
-            if (pauseBTN) {
-                pauseBTN.hidden = true
-                pauseBTN.classList.remove('paused')
-                pauseBTN.onclick = null
-            }
-            pausa.reiniciar()
-            this.pausaAtual = null
-            ipcRenderer.send('main-window-progress-reset')
+            soltarControles()
+            this.sairDoProgresso()
         }
     }
 
@@ -1207,12 +1458,7 @@ class Home {
     falhouAoIniciar(err) {
         registro.erro('ao começar o jogo', err)
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoStartingBOX = document.querySelector('.info-starting-game')
-
-        if (playInstanceBTN) playInstanceBTN.style.display = 'flex'
-        if (infoStartingBOX) infoStartingBOX.style.display = 'none'
-        ipcRenderer.send('main-window-progress-reset')
+        this.sairDoProgresso()
 
         new popup().openPopup({
             title: lang.t('error.start_title'),
@@ -1232,8 +1478,6 @@ class Home {
         let authenticator = await this.db.readData('accounts', configClient.account_selected)
         let options = instance.find(i => i.name == configClient.instance_select)
 
-        let playInstanceBTN = document.querySelector('.play-instance')
-        let infoStartingBOX = document.querySelector('.info-starting-game')
         let infoStarting = document.querySelector(".info-starting-game-text")
         let progressBar = document.querySelector('.progress-bar')
 
@@ -1253,6 +1497,7 @@ class Home {
             '.atena-version.json',
             '.atena-hashes.json',
             '.atena-extras.json',
+            '.atena-fps.json',
             // Os mods opcionais nao estao no manifesto. Sem esta linha, a
             // primeira atualizacao do modpack apagaria o Essential junto com o
             // resto do que "sobrou" - e a pessoa reinstalaria toda semana.
@@ -1299,23 +1544,32 @@ class Home {
             }
         }
 
-        playInstanceBTN.style.display = "none"
-        infoStartingBOX.style.display = "block"
-        progressBar.style.display = "";
-        ipcRenderer.send('main-window-progress-load')
+        await this.entrarEmProgresso()
 
         infoStarting.innerHTML = lang.t(
             state === 'install' ? 'home.installing' : state === 'update' ? 'home.updating' : 'home.connecting'
         )
 
-        // Guarda uma cópia das pastas do jogador antes de sincronizar o modpack.
-        // Com o modo estrito ligado, qualquer arquivo fora do modpack é apagado —
-        // o backup é a rede de segurança para o que a staff esqueceu de ignorar.
-        // Na primeira instalação não há nada para guardar.
-        if (options.backup?.length && state !== 'install') {
+        // O backup existe por causa do modo estrito: com ele ligado, qualquer
+        // arquivo fora do modpack é apagado, e a cópia é a rede de segurança
+        // para o que a staff esqueceu de ignorar.
+        //
+        // Com o modo estrito DESLIGADO, jogar não apaga nada — e então copiar
+        // 535 MB antes de cada partida é espera pura, por uma proteção contra
+        // um risco que não existe. O download já tem o seu próprio backup.
+        if (options.backup?.length && state !== 'install' && options.verify) {
             infoStarting.innerHTML = lang.t('home.backup')
             try {
-                await backup.run(base, options.name, options.backup)
+                await backup.run(base, options.name, options.backup, (feitos, total) => {
+                    let agora = Date.now()
+                    if (feitos !== total && agora - (this.ultimoDesenho || 0) < 120) return
+                    this.ultimoDesenho = agora
+                    infoStarting.innerHTML = lang.t('home.backup_progress', {
+                        percent: ((feitos / Math.max(1, total)) * 100).toFixed(0)
+                    })
+                    progressBar.value = feitos
+                    progressBar.max = total
+                })
             } catch (err) {
                 console.error('[backup] falhou, seguindo mesmo assim:', err)
             }
@@ -1329,6 +1583,15 @@ class Home {
             infoStarting.innerHTML =
                 `${lang.t('home.preparing')}<br><small>${lang.t('home.preparing_hint')}</small>`
             progressBar.removeAttribute('value')   // barra indeterminada: está andando, só não dá para medir
+        }
+
+        // O FPS Boost mexe em dois arquivos que vem do modpack, entao uma
+        // atualizacao os devolve ao padrao. Reaplicar aqui e o que impede o
+        // ajuste de sumir sozinho, sem a pessoa entender por que.
+        try {
+            await desempenho.reaplicar(modpack.dir(base, options.name))
+        } catch (err) {
+            console.error('[fps] nao consegui reaplicar:', err.message)
         }
 
         launch.Launch(opt);
@@ -1423,8 +1686,7 @@ class Home {
                 ipcRenderer.send("main-window-show")
             };
             ipcRenderer.send('main-window-progress-reset')
-            infoStartingBOX.style.display = "none"
-            playInstanceBTN.style.display = "flex"
+            this.sairDoProgresso()
             infoStarting.innerHTML = lang.t('home.verifying')
             if (speedElement) speedElement.textContent = ''
             if (etaElement) etaElement.textContent = ''
@@ -1455,8 +1717,7 @@ class Home {
                 ipcRenderer.send("main-window-show")
             };
             ipcRenderer.send('main-window-progress-reset')
-            infoStartingBOX.style.display = "none"
-            playInstanceBTN.style.display = "flex"
+            this.sairDoProgresso()
             infoStarting.innerHTML = lang.t('home.verifying')
             if (speedElement) speedElement.textContent = ''
             if (etaElement) etaElement.textContent = ''

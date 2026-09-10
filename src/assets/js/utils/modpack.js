@@ -210,6 +210,23 @@ class Modpack {
         const cache = this.readHashCache(pasta);
         const cacheNovo = {};
 
+        // O cache e gravado aconteca o que acontecer. Cancelar no meio de um
+        // download de 1,6 GB nao pode significar jogar fora a conferencia do
+        // que ja estava certo: sem isto, quem desiste uma vez paga a espera
+        // inteira de novo na tentativa seguinte.
+        try {
+            return await this.sincronizar({
+                pasta, arquivos, protegidos, cache, cacheNovo,
+                concorrencia, aoProgresso, pausa
+            });
+        } finally {
+            this.writeHashCache(pasta, cacheNovo);
+        }
+    }
+
+    /** O trabalho em si. Separado so para o cache acima ter um `finally`. */
+    async sincronizar({ pasta, arquivos, protegidos, cache, cacheNovo, concorrencia, aoProgresso, pausa }) {
+
         /* --- 1. o que precisa vir do servidor ------------------------------ */
 
         const faltando = [];
@@ -321,7 +338,6 @@ class Modpack {
         const emParalelo = Math.min(32, Math.max(1, Math.round(Number(concorrencia) || 5)));
         await Promise.all(Array.from({ length: emParalelo }, trabalhar));
 
-        this.writeHashCache(pasta, cacheNovo);
         return { baixados, mantidos, bytes, falhas };
     }
 
