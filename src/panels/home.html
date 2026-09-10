@@ -100,26 +100,45 @@
 
             <div class="instances-List content-scroll"></div>
 
+            <!-- Grade em vez de lista: sete paragrafos empilhados viravam uma
+                 parede de texto que ninguem lia ate o fim. Aqui cada acao e um
+                 quadrado com icone, e a vista bate em tudo de uma vez. -->
             <div class="pack-actions">
-                <div class="pack-action" data-action="reinstall">
-                    <strong data-i18n="home.reinstall"></strong>
-                    <small data-i18n="home.reinstall_text"></small>
+                <div class="pack-action" data-action="extras">
+                    <span class="pack-icon ico-extras"></span>
+                    <strong data-i18n="extras.title"></strong>
+                    <small data-i18n="extras.text"></small>
+                </div>
+                <div class="pack-action" data-action="import">
+                    <span class="pack-icon ico-import"></span>
+                    <strong data-i18n="import.title"></strong>
+                    <small data-i18n="import.text"></small>
                 </div>
                 <div class="pack-action" data-action="repair">
+                    <span class="pack-icon ico-repair"></span>
                     <strong data-i18n="home.repair"></strong>
                     <small data-i18n="home.repair_text"></small>
                 </div>
                 <div class="pack-action" data-action="changelog">
+                    <span class="pack-icon ico-changelog"></span>
                     <strong data-i18n="home.changelog"></strong>
                     <small data-i18n="home.changelog_text"></small>
                 </div>
                 <div class="pack-action" data-action="folder">
+                    <span class="pack-icon ico-folder"></span>
                     <strong data-i18n="home.open_folder"></strong>
                     <small data-i18n="home.open_folder_text"></small>
                 </div>
                 <div class="pack-action" data-action="report">
+                    <span class="pack-icon ico-report"></span>
                     <strong data-i18n="support.title"></strong>
                     <small data-i18n="support.text"></small>
+                </div>
+                <!-- Apaga o modpack inteiro: fica por ultimo, e avisa pela cor. -->
+                <div class="pack-action danger" data-action="reinstall">
+                    <span class="pack-icon ico-reinstall"></span>
+                    <strong data-i18n="home.reinstall"></strong>
+                    <small data-i18n="home.reinstall_text"></small>
                 </div>
             </div>
         </div>
@@ -131,6 +150,29 @@
             <div class="close-news icon-close"></div>
             <p data-i18n="news.title"></p>
             <div class="news-list content-scroll"></div>
+        </div>
+    </div>
+
+    <!-- mods opcionais: Essential e companhia -->
+    <div class="extras-popup">
+        <div class="extras-tab glass">
+            <div class="close-extras icon-close"></div>
+            <p data-i18n="extras.title"></p>
+            <div class="extras-intro" data-i18n="extras.intro"></div>
+            <div class="extras-list content-scroll"></div>
+        </div>
+    </div>
+
+    <!-- trazer um modpack que ja esta no computador -->
+    <div class="import-popup">
+        <div class="import-tab glass">
+            <div class="close-import icon-close"></div>
+            <p data-i18n="import.title"></p>
+            <div class="import-intro" data-i18n="import.intro"></div>
+            <div class="import-list content-scroll"></div>
+            <div class="row-end">
+                <div class="import-browse size-btn" data-i18n="import.browse"></div>
+            </div>
         </div>
     </div>
 

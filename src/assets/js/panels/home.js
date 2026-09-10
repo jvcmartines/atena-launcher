@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -35,6 +35,8 @@ class Home {
         this.playersPopup()
         this.newsPopup()
         this.changelogPopup()
+        this.extrasPopup()
+        this.importPopup()
         this.richPresence()
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
@@ -498,6 +500,8 @@ class Home {
 
         if (action === 'repair') return this.repairPack(instance, base)
         if (action === 'report') return this.reportProblem(instance, base)
+        if (action === 'extras') return this.showExtras(instance, base)
+        if (action === 'import') return this.showImport(instance, base)
 
         if (action === 'reinstall') {
             if (!confirm(lang.t('home.reinstall_confirm'))) return
@@ -676,6 +680,344 @@ class Home {
 
         let porta = Number(options.status.port) || 25565
         return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
+    }
+
+    /* ---------------------------------------------- mods opcionais ------ */
+
+    extrasPopup() {
+        let caixa = document.querySelector('.extras-popup')
+        if (!caixa) return
+
+        let fechar = () => caixa.style.display = 'none'
+        document.querySelector('.close-extras').addEventListener('click', fechar)
+        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
+    }
+
+    /**
+     * Lista os mods que a pessoa pode ligar por conta própria — hoje, o
+     * Essential.
+     *
+     * Cada linha tem um botão que instala ou remove na hora. Não existe
+     * "jogar com" e "jogar sem": o mod fica em mods/, e é isso. Um botão que
+     * enfiasse e tirasse 50 MB do disco a cada partida seria mais lento que a
+     * própria partida, e a primeira queda de internet deixaria a pasta pela
+     * metade.
+     */
+    async showExtras(instance, base) {
+        document.querySelector('.instance-popup').style.display = 'none'
+
+        let caixa = document.querySelector('.extras-popup')
+        let lista = document.querySelector('.extras-list')
+        caixa.style.display = 'flex'
+        lista.innerHTML = `<div class="players-empty">${lang.t('extras.loading')}</div>`
+
+        let arquivos = await modpack.manifest(instance.url)
+        let itens = await extras.estado(base, instance, arquivos)
+
+        if (!itens.length) {
+            lista.innerHTML = `<div class="players-empty">${lang.t('extras.none')}</div>`
+            return
+        }
+
+        lista.innerHTML = itens.map(item => `
+            <div class="extra-item" data-id="${item.id}">
+                <div class="extra-info">
+                    <strong>${this.escapar(item.nome)}</strong>
+                    <small>${lang.t(`extras.about_${item.id}`)}</small>
+                    <span class="extra-meta"></span>
+                </div>
+                <button class="extra-toggle"></button>
+            </div>`).join('')
+
+        for (let item of itens) {
+            let linha = lista.querySelector(`.extra-item[data-id="${item.id}"]`)
+            this.desenharExtra(linha, item)
+
+            linha.querySelector('.extra-toggle').addEventListener('click', () => {
+                this.alternarExtra(instance, base, item, linha)
+            })
+
+            // A versão publicada vem da internet: quando chega, entra na linha.
+            // Chegando ou não, o botão já funciona.
+            if (!item.instalado && item.disponivel) {
+                extras.versaoRemota(item.id, item.plataforma).then(versao => {
+                    if (!versao) return
+                    item.versaoRemota = versao
+                    this.desenharExtra(linha, item)
+                })
+            }
+        }
+    }
+
+    /** Texto e botão de uma linha, a partir do estado atual do mod. */
+    desenharExtra(linha, item) {
+        if (!linha) return
+
+        let meta = linha.querySelector('.extra-meta')
+        let botao = linha.querySelector('.extra-toggle')
+
+        if (!item.disponivel) {
+            meta.textContent = lang.t('extras.unsupported')
+            botao.textContent = lang.t('extras.install')
+            botao.disabled = true
+            return
+        }
+
+        botao.disabled = false
+        linha.classList.toggle('installed', item.instalado)
+
+        if (item.instalado) {
+            meta.textContent = [
+                lang.t('extras.on'),
+                item.versao ? `v${item.versao}` : null,
+                item.tamanho ? this.tamanhoCurto(item.tamanho) : null
+            ].filter(Boolean).join(' · ')
+            botao.textContent = lang.t('extras.remove')
+        } else {
+            meta.textContent = [
+                lang.t('extras.off'),
+                item.versaoRemota ? `v${item.versaoRemota}` : null
+            ].filter(Boolean).join(' · ')
+            botao.textContent = lang.t('extras.install')
+        }
+    }
+
+    /** Liga ou desliga o mod, com a porcentagem no próprio botão. */
+    async alternarExtra(instance, base, item, linha) {
+        let botao = linha.querySelector('.extra-toggle')
+        botao.disabled = true
+
+        try {
+            if (item.instalado) {
+                await extras.remover(base, instance, item.id)
+                item.instalado = false
+                item.tamanho = 0
+                item.versao = null
+            } else {
+                botao.textContent = '0%'
+                let feito = await extras.instalar(base, instance, item.id, ({ bytes, bytesTotais }) => {
+                    // O download é de 50 MB: repintar a cada pedaço custaria
+                    // mais que o próprio download.
+                    let agora = Date.now()
+                    if (agora - (this.ultimoExtra || 0) < 120) return
+                    this.ultimoExtra = agora
+                    botao.textContent = bytesTotais
+                        ? `${((bytes / bytesTotais) * 100).toFixed(0)}%`
+                        : this.tamanhoCurto(bytes)
+                })
+
+                item.instalado = true
+                item.tamanho = feito.bytes
+                item.versao = feito.versao
+            }
+        } catch (err) {
+            console.error('[extras] falhou:', err)
+            let motivo = { 'sem-versao': 'extras.no_build', 'sem-plataforma': 'extras.no_build', checksum: 'extras.checksum' }[err.message]
+
+            new popup().openPopup({
+                title: lang.t('extras.title'),
+                content: motivo ? lang.t(motivo, { name: item.nome }) : lang.t('extras.failed', { name: item.nome }),
+                color: 'red',
+                options: true
+            })
+        } finally {
+            botao.disabled = false
+            this.desenharExtra(linha, item)
+        }
+    }
+
+    /* ------------------------------------ importar um modpack do disco --- */
+
+    importPopup() {
+        let caixa = document.querySelector('.import-popup')
+        if (!caixa) return
+
+        let fechar = () => caixa.style.display = 'none'
+        document.querySelector('.close-import').addEventListener('click', fechar)
+        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
+
+        document.querySelector('.import-browse').addEventListener('click', async () => {
+            let escolhida = await ipcRenderer.invoke('choose-folder', lang.t('import.title'))
+            if (!escolhida) return
+
+            let instance = await this.currentInstance()
+            if (!instance) return
+
+            fechar()
+            this.importarDe(instance, await this.basePath(), escolhida)
+                .catch(err => this.falhouAoIniciar(err))
+        })
+    }
+
+    /**
+     * Mostra as instalações que existem no computador.
+     *
+     * A varredura olha os lugares onde os launchers costumam guardar as
+     * coisas. Não achar nada não é impedimento: o botão de escolher a pasta
+     * na mão cobre quem instalou em outro lugar.
+     */
+    async showImport(instance, base) {
+        document.querySelector('.instance-popup').style.display = 'none'
+
+        let caixa = document.querySelector('.import-popup')
+        let lista = document.querySelector('.import-list')
+        caixa.style.display = 'flex'
+        lista.innerHTML = `<div class="players-empty">${lang.t('import.searching')}</div>`
+
+        let achados = await importar.candidatos(await appdata(), modpack.dir(base, instance.name))
+
+        if (!achados.length) {
+            lista.innerHTML = `<div class="players-empty">${lang.t('import.nothing')}</div>`
+            return
+        }
+
+        lista.innerHTML = achados.map((achado, i) => `
+            <div class="import-item" data-i="${i}">
+                <strong>${this.escapar(achado.rotulo)}</strong>
+                <span class="import-meta">${lang.t('import.found', {
+                    mods: achado.mods, size: this.tamanhoCurto(achado.bytes)
+                })}</span>
+                <span class="import-path">${this.escapar(achado.caminho)}</span>
+            </div>`).join('')
+
+        lista.querySelectorAll('.import-item').forEach(linha => {
+            linha.addEventListener('click', () => {
+                caixa.style.display = 'none'
+                this.importarDe(instance, base, achados[Number(linha.dataset.i)].caminho)
+                    .catch(err => this.falhouAoIniciar(err))
+            })
+        })
+    }
+
+    /**
+     * Copia da pasta escolhida tudo o que bater com o manifesto.
+     *
+     * Usa a mesma barra e o mesmo botão de pausa do download, porque a
+     * conferência é do mesmo tamanho: 5 mil arquivos, 1,6 GB de SHA-1.
+     */
+    async importarDe(instance, base, origem) {
+        const path = require('path')
+        let destino = modpack.dir(base, instance.name)
+
+        if (path.resolve(origem).toLowerCase() === path.resolve(destino).toLowerCase()) {
+            return new popup().openPopup({
+                title: lang.t('import.title'),
+                content: lang.t('import.same_folder'),
+                color: 'red',
+                options: true
+            })
+        }
+
+        let arquivos = await modpack.manifest(instance.url)
+        if (!arquivos.length) {
+            return new popup().openPopup({
+                title: lang.t('import.title'),
+                content: lang.t('import.no_manifest'),
+                color: 'red',
+                options: true
+            })
+        }
+
+        let configClient = await this.db.readData('configClient')
+        let protegidos = await modpack.expandProtected(
+            instance.url, configClient?.launcher_config?.protected || []
+        )
+
+        let playInstanceBTN = document.querySelector('.play-instance')
+        let infoBox = document.querySelector('.info-starting-game')
+        let infoText = document.querySelector('.info-starting-game-text')
+        let progressBar = document.querySelector('.progress-bar')
+        let speedElement = document.querySelector('.download-speed')
+        let etaElement = document.querySelector('.download-eta')
+        let pauseBTN = document.querySelector('.pause-btn')
+
+        playInstanceBTN.style.display = 'none'
+        infoBox.style.display = 'block'
+        progressBar.style.display = ''
+        progressBar.value = 0
+        ipcRenderer.send('main-window-progress-load')
+
+        let pausa = new Pausa()
+        this.pausaAtual = pausa
+
+        if (pauseBTN) {
+            pauseBTN.hidden = false
+            pauseBTN.textContent = lang.t('home.pause')
+            pauseBTN.onclick = () => {
+                let pausado = pausa.alternar()
+                pauseBTN.textContent = lang.t(pausado ? 'home.resume' : 'home.pause')
+                pauseBTN.classList.toggle('paused', pausado)
+                if (pausado) infoText.innerHTML = lang.t('home.paused')
+            }
+        }
+
+        try {
+            let resultado = await importar.importar({
+                origem,
+                destino,
+                arquivos,
+                protegidos,
+                pausa,
+                aoProgresso: dados => {
+                    if (pausa.ativa) return
+
+                    let agora = Date.now()
+                    if (dados.feitos !== dados.total && agora - (this.ultimoDesenho || 0) < 100) return
+                    this.ultimoDesenho = agora
+
+                    infoText.innerHTML = lang.t('import.working', {
+                        percent: ((dados.feitos / dados.total) * 100).toFixed(0),
+                        count: dados.copiados
+                    })
+                    progressBar.value = dados.feitos
+                    progressBar.max = dados.total
+                    if (speedElement) speedElement.textContent = this.tamanhoCurto(dados.bytes)
+                    ipcRenderer.send('main-window-progress', { progress: dados.feitos, size: dados.total })
+                }
+            })
+
+            // O hash de cada arquivo copiado já é conhecido. Passar isso ao
+            // cache é o que impede o próximo Jogar de reler 1,6 GB para
+            // descobrir o que a importação acabou de garantir.
+            modpack.semearCache(destino, resultado.hashes)
+
+            await this.refreshState(instance)
+
+            new popup().openPopup({
+                title: lang.t('import.title'),
+                content: resultado.copiados
+                    ? lang.t('import.done', {
+                        count: resultado.copiados,
+                        size: this.tamanhoCurto(resultado.bytes),
+                        missing: resultado.faltando
+                    })
+                    : lang.t('import.empty'),
+                color: resultado.copiados ? 'var(--success)' : 'var(--gold)',
+                options: true
+            })
+        } finally {
+            infoBox.style.display = 'none'
+            playInstanceBTN.style.display = 'flex'
+            progressBar.value = 0
+            if (speedElement) speedElement.textContent = ''
+            if (etaElement) etaElement.textContent = ''
+            if (pauseBTN) {
+                pauseBTN.hidden = true
+                pauseBTN.classList.remove('paused')
+                pauseBTN.onclick = null
+            }
+            pausa.reiniciar()
+            this.pausaAtual = null
+            ipcRenderer.send('main-window-progress-reset')
+        }
+    }
+
+    /** "1,6 GB" a partir de bytes. */
+    tamanhoCurto(bytes) {
+        let n = Number(bytes) || 0
+        if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`
+        if (n >= 1048576) return `${Math.round(n / 1048576)} MB`
+        return `${Math.max(1, Math.round(n / 1024))} KB`
     }
 
     /* ------------------------------------------- instalar / atualizar ---- */
@@ -910,6 +1252,11 @@ class Home {
             // qual versão está instalada e reconfere tudo do zero.
             '.atena-version.json',
             '.atena-hashes.json',
+            '.atena-extras.json',
+            // Os mods opcionais nao estao no manifesto. Sem esta linha, a
+            // primeira atualizacao do modpack apagaria o Essential junto com o
+            // resto do que "sobrou" - e a pessoa reinstalaria toda semana.
+            ...extras.caminhosProtegidos(base, options),
             ...await modpack.expandProtected(options.url, userProtected)
         ]
 

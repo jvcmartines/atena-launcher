@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-const { app, ipcMain, nativeTheme, BrowserWindow } = require('electron');
+const { app, ipcMain, nativeTheme, BrowserWindow, dialog } = require('electron');
 const { Microsoft } = require('minecraft-java-core');
 const { autoUpdater } = require('electron-updater')
 
@@ -107,6 +107,18 @@ ipcMain.handle('discord-window', async (_, url) => {
 ipcMain.on('discord-window-close', () => {
     if (discordWindow) discordWindow.destroy();
 });
+
+// Escolher uma pasta do computador. Usado pela importacao de um modpack que
+// ja esta em disco: o dialogo nativo e a unica forma de o jogador apontar uma
+// pasta que o launcher nao conhecia.
+ipcMain.handle('choose-folder', async (_, titulo) => {
+    const janela = MainWindow.getWindow();
+    const escolha = await dialog.showOpenDialog(janela, {
+        title: titulo || 'Choose a folder',
+        properties: ['openDirectory']
+    });
+    return escolha.canceled ? null : escolha.filePaths[0];
+})
 
 ipcMain.handle('is-dark-theme', (_, theme) => {
     if (theme === 'dark') return true

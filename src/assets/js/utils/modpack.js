@@ -404,6 +404,19 @@ class Modpack {
         }
     }
 
+    /**
+     * Acrescenta entradas ao cache sem apagar as que já estavam.
+     *
+     * Quem usa isto é a importação: ela já calculou o SHA-1 de cada arquivo que
+     * copiou, e sem passar esse resultado adiante a conferência seguinte leria
+     * os mesmos 1,6 GB de novo — a espera do download voltaria como espera de
+     * disco, e a importação teria economizado quase nada.
+     */
+    semearCache(pasta, novos) {
+        if (!novos || !Object.keys(novos).length) return;
+        this.writeHashCache(pasta, { ...this.readHashCache(pasta), ...novos });
+    }
+
     /* -------------------------------------------- verificar e reparar ---- */
 
     /**

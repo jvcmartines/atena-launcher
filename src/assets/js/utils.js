@@ -25,6 +25,8 @@ import suporte from './utils/suporte.js';
 import presenca from './utils/presenca.js';
 import registro from './utils/registro.js';
 import Pausa from './utils/pausa.js';
+import importar from './utils/importar.js';
+import extras from './utils/extras.js';
 
 /**
  * Fundo de época.
@@ -311,5 +313,7 @@ export {
     suporte as suporte,
     presenca as presenca,
     registro as registro,
-    Pausa as Pausa
+    Pausa as Pausa,
+    importar as importar,
+    extras as extras
 }

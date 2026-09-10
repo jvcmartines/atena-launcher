@@ -288,9 +288,9 @@
 .instances-tab {
     position: relative;
     width: min(440px, 86vw);
-    max-height: 80vh;
+    max-height: 84vh;
     overflow-y: auto;
-    padding: 26px;
+    padding: 22px;
     animation: pop-in 0.3s var(--ease);
 }
 
@@ -329,8 +329,8 @@
     align-items: baseline;
     gap: 10px;
     flex-wrap: wrap;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
+    padding-bottom: 13px;
+    margin-bottom: 13px;
     border-bottom: 1px solid var(--stroke);
 }
 
@@ -379,40 +379,128 @@
     background: linear-gradient(90deg, rgba(242, 199, 92, 0.16), transparent);
 }
 
-/* ações: reinstalar, abrir a pasta */
+/* ------------------------------------------ acoes do modpack ---------- */
+
+/* Sete acoes em coluna viravam uma parede de texto de meia tela: ninguem
+   chegava ao fim, e as duas ultimas nunca eram encontradas. Em grade de dois,
+   com um icone para o olho se agarrar, tudo cabe numa olhada. */
 .pack-actions {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
 .pack-action {
-    padding: 13px 16px;
+    position: relative;
+    padding: 12px 14px 13px;
     background: var(--background-element);
     border: 1px solid var(--stroke);
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
     transition: var(--transition);
 }
 
 .pack-action:hover {
     border-color: var(--stroke-strong);
-    transform: translateX(4px);
+    background: linear-gradient(160deg, rgba(242, 199, 92, 0.12), var(--background-element));
+    transform: translateY(-2px);
 }
 
 .pack-action strong {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.3;
     pointer-events: none;
 }
 
 .pack-action small {
     display: block;
-    margin-top: 3px;
-    font-size: 11.5px;
-    line-height: 1.5;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.45;
     color: var(--color-dim);
     pointer-events: none;
+}
+
+/* O icone e mascara, nao imagem: assim ele herda a cor e acende junto com o
+   quadrado no hover. */
+.pack-icon {
+    display: block;
+    width: 19px;
+    height: 19px;
+    margin-bottom: 7px;
+    background-color: var(--gold);
+    opacity: 0.75;
+    transition: var(--transition);
+    pointer-events: none;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.pack-action:hover .pack-icon {
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+/* Reinstalar apaga o modpack inteiro. Fica por ultimo, ocupa a largura toda
+   para nao ser clicado por engano no lugar do vizinho, e avisa pela cor. */
+.pack-action.danger {
+    grid-column: 1 / -1;
+}
+
+.pack-action.danger .pack-icon {
+    background-color: var(--danger);
+}
+
+.pack-action.danger:hover {
+    border-color: var(--danger);
+    background: linear-gradient(160deg, rgba(255, 107, 107, 0.12), var(--background-element));
+}
+
+.ico-extras {
+    -webkit-mask-image: var(--ico-extras);
+    mask-image: var(--ico-extras);
+}
+
+.ico-import {
+    -webkit-mask-image: var(--ico-import);
+    mask-image: var(--ico-import);
+}
+
+.ico-repair {
+    -webkit-mask-image: var(--ico-repair);
+    mask-image: var(--ico-repair);
+}
+
+.ico-changelog {
+    -webkit-mask-image: var(--ico-changelog);
+    mask-image: var(--ico-changelog);
+}
+
+.ico-folder {
+    -webkit-mask-image: var(--ico-folder);
+    mask-image: var(--ico-folder);
+}
+
+.ico-report {
+    -webkit-mask-image: var(--ico-report);
+    mask-image: var(--ico-report);
+}
+
+.ico-reinstall {
+    -webkit-mask-image: var(--ico-reinstall);
+    mask-image: var(--ico-reinstall);
+}
+
+/* Tela baixa: uma coluna so, senao os quadrados ficam altos demais. */
+@media (max-width: 430px) {
+    .pack-actions {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* -------------------------------------------------------- responsivo --- */
@@ -923,4 +1011,198 @@
     color: var(--wine-900);
     background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
     border-color: transparent;
+}
+
+/* ------------------------------------ mods opcionais / importar -------- */
+
+.extras-popup,
+.import-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #000000b3;
+    backdrop-filter: blur(6px);
+}
+
+.extras-tab,
+.import-tab {
+    position: relative;
+    width: min(480px, 88vw);
+    max-height: 78vh;
+    padding: 26px;
+    animation: pop-in 0.3s var(--ease);
+}
+
+.extras-tab > p,
+.import-tab > p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.extras-intro,
+.import-intro {
+    margin-bottom: 16px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--color-faint);
+}
+
+.close-extras,
+.close-import {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    color: var(--color-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.close-extras:hover,
+.close-import:hover {
+    color: var(--danger);
+    background: var(--background-element);
+}
+
+.extras-list,
+.import-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 52vh;
+    padding-right: 6px;
+}
+
+/* ---- uma linha por mod opcional --- */
+
+.extra-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+}
+
+/* Instalado: a borda dourada diz de longe o que está ligado. */
+.extra-item.installed {
+    border-color: var(--stroke-strong);
+    background: linear-gradient(90deg, rgba(242, 199, 92, 0.1), var(--background-element));
+}
+
+.extra-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.extra-info strong {
+    display: block;
+    font-size: 14.5px;
+}
+
+.extra-info small {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-dim);
+}
+
+.extra-meta {
+    display: block;
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: var(--color-faint);
+}
+
+.extra-toggle {
+    flex-shrink: 0;
+    min-width: 86px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.extra-toggle:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+/* Instalado: o botão passa a ser o de tirar, e para de gritar. */
+.extra-item.installed .extra-toggle {
+    color: var(--color-dim);
+    background: transparent;
+    border-color: var(--stroke);
+}
+
+.extra-item.installed .extra-toggle:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.extra-toggle:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* ---- uma linha por pasta encontrada --- */
+
+.import-item {
+    padding: 13px 16px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.import-item:hover {
+    border-color: var(--stroke-strong);
+    transform: translateX(4px);
+}
+
+.import-item strong {
+    display: block;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.import-meta {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: var(--gold);
+    pointer-events: none;
+}
+
+/* O caminho é longo e não pode empurrar a caixa: quebra onde der. */
+.import-path {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--color-faint);
+    overflow-wrap: anywhere;
+    pointer-events: none;
 }

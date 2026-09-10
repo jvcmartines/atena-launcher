@@ -34,6 +34,17 @@
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
     --transition: all 0.35s var(--ease);
 
+    /* Icones das acoes do modpack. Vao como mascara, nao como imagem: assim
+       herdam a cor do tema e acendem no hover sem precisar de um arquivo por
+       cor. Ficam aqui, junto da paleta, porque e onde se procura por eles. */
+    --ico-extras: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4h7v7H4z'/%3E%3Cpath d='M13 4h7v7h-7z'/%3E%3Cpath d='M4 13h7v7H4z'/%3E%3Cpath d='M16.5 14v5.5'/%3E%3Cpath d='M13.75 16.75h5.5'/%3E%3C/svg%3E");
+    --ico-import: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v10.5'/%3E%3Cpath d='M8 10l4 4 4-4'/%3E%3Cpath d='M4 16.5v2A2.5 2.5 0 006.5 21h11a2.5 2.5 0 002.5-2.5v-2'/%3E%3C/svg%3E");
+    --ico-repair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7.5 2.8v5.6c0 4.6-3.2 7.6-7.5 8.6-4.3-1-7.5-4-7.5-8.6V5.8L12 3z'/%3E%3Cpath d='M8.8 12.1l2.3 2.3 4.1-4.4'/%3E%3C/svg%3E");
+    --ico-changelog: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6h11'/%3E%3Cpath d='M9 12h11'/%3E%3Cpath d='M9 18h11'/%3E%3Cpath d='M4.6 6h.01'/%3E%3Cpath d='M4.6 12h.01'/%3E%3Cpath d='M4.6 18h.01'/%3E%3C/svg%3E");
+    --ico-folder: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7.5A2.5 2.5 0 015.5 5h3.1l2 2.2h7.9A2.5 2.5 0 0121 9.7v7.8a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5v-10z'/%3E%3C/svg%3E");
+    --ico-report: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 14.5a2.5 2.5 0 01-2.5 2.5H8l-5 4V5.5A2.5 2.5 0 015.5 3h13A2.5 2.5 0 0121 5.5v9z'/%3E%3Cpath d='M12 7v4'/%3E%3Cpath d='M12 13.6h.01'/%3E%3C/svg%3E");
+    --ico-reinstall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.6 12a8.4 8.4 0 0114.6-5.7'/%3E%3Cpath d='M19.4 3.4v3.8h-3.8'/%3E%3Cpath d='M20.4 12a8.4 8.4 0 01-14.6 5.7'/%3E%3Cpath d='M4.6 20.6v-3.8h3.8'/%3E%3C/svg%3E");
+
     /* compatibilidade com o código herdado */
     --dark-color: var(--wine-800);
     --light-color: #F7F1F3;
