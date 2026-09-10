@@ -131,9 +131,14 @@ class Modpack {
         return query ? `${url}?${query}` : url;
     }
 
-    async remoteVersion(manifestUrl) {
+    async remoteVersion(manifestUrl, de) {
         try {
-            const response = await fetch(this.siblingUrl(manifestUrl, '/version'));
+            let url = this.siblingUrl(manifestUrl, '/version');
+            // Dizendo em que versão estamos, o servidor pode responder com o
+            // delta em vez do pacote inteiro.
+            if (de != null) url += `${url.includes('?') ? '&' : '?'}de=${encodeURIComponent(de)}`;
+
+            const response = await fetch(url);
             if (!response.ok) return null;
             return await response.json();
         } catch {
@@ -184,6 +189,52 @@ class Modpack {
             }
         }
         return [...expanded];
+    }
+
+    /**
+     * Quais destes arquivos o JOGADOR mexeu.
+     *
+     * Mesma pergunta que a sincronização faz — se o servidor publica hoje o
+     * mesmo hash de ontem, quem mudou o arquivo foi a pessoa — só que aqui a
+     * resposta vem antes, em bloco. É o que permite ao pacote saber o que não
+     * pode sobrescrever ANTES de começar a extrair.
+     *
+     * Numa instalação nova a pasta está vazia, todos os `stat` falham e o
+     * conjunto sai vazio em milissegundos.
+     */
+    async preservaveis(pasta, arquivos) {
+        const cache = this.readHashCache(pasta);
+        const meus = new Set();
+
+        for (let i = 0; i < arquivos.length; i += 1) {
+            const arquivo = arquivos[i];
+            if (i % 300 === 0) await this.respirar();
+            if (!this.doJogador(arquivo.path)) continue;
+
+            const completo = path.join(pasta, arquivo.path);
+            let stat;
+            try {
+                stat = await fsp.stat(completo);
+            } catch {
+                continue;   // não existe: não há o que preservar
+            }
+
+            const anotado = cache[arquivo.path];
+            const servidorAntes = anotado ? (anotado.servidor ?? anotado.hash) : null;
+
+            // Sem registro do que o servidor publicava antes, não dá para saber
+            // de quem foi a mudança. Nesse caso o publicado ganha — é o mesmo
+            // que a sincronização faz.
+            if (servidorAntes === null || servidorAntes !== arquivo.hash) continue;
+
+            const hash = (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs)
+                ? anotado.hash
+                : await this.sha1(completo);
+
+            if (hash !== arquivo.hash) meus.add(arquivo.path);
+        }
+
+        return meus;
     }
 
     /* ---------------------------------------------- baixar o modpack ----- */

@@ -306,5 +306,8 @@
     "modpack.available": "Available modpacks",
     "modpack.available_text": "Click one to play it. What you can see here depends on your roles.",
     "modpack.actions": "Actions",
-    "modpack.checking": "checking…"
+    "modpack.checking": "checking…",
+    "home.pack_checking": "Checking what is already here…",
+    "home.pack_full": "Downloading the modpack {percent}% ({part}/{parts})",
+    "home.pack_delta": "Downloading what changed {percent}% ({part}/{parts})"
 }

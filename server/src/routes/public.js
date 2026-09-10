@@ -6,6 +6,7 @@
  *   GET  /api/instances                   modpacks que ESTE jogador pode ver
  *   GET  /api/instances/:id/files         manifesto (path, url, size, hash)
  *   GET  /files/:id/<caminho>             download dos arquivos do modpack
+ *   GET  /api/instances/:id/pacotes/:arq  o modpack inteiro (ou um delta) num zip
  *
  *   GET  /api/discord/config              se a verificação está ligada
  *   POST /api/discord/start               começa a conexão, devolve a URL
@@ -20,6 +21,7 @@ const discord = require('../lib/discord');
 const players = require('../lib/players');
 const mcstatus = require('../lib/mcstatus');
 const signed = require('../lib/signed');
+const pacotes = require('../lib/pacotes');
 const { DEFAULT_CONFIG, toLauncherInstance } = require('../lib/defaults');
 const { encodePath } = require('../lib/paths');
 const { PUBLIC_URL, FILES_DIR, SIGNED_URLS } = require('../config');
@@ -201,10 +203,22 @@ router.get('/api/instances/:id/server-status', blockBanned, async (req, res) => 
     res.json(await mcstatus.status(ip, Number(port) || 25565));
 });
 
-/** Versão publicada — útil para o site mostrar "modpack v12". */
+/**
+ * Versão publicada, e por onde baixá-la de uma vez só.
+ *
+ * `de` é a versão que o launcher tem instalada. Com ela, a resposta traz o
+ * DELTA — só o que mudou — em vez do pacote inteiro. Sem ela (instalação
+ * nova), vem o pacote completo.
+ *
+ * Quando não há pacote publicado o campo vem nulo, e o launcher volta ao
+ * download arquivo a arquivo. Nada aqui é obrigatório para ele funcionar.
+ */
 router.get('/api/instances/:id/version', (req, res) => {
     const published = manifest.readManifest(req.params.id);
     if (!published) return res.status(404).json({ error: 'Modpack ainda não publicado.' });
+
+    const de = Number(req.query.de);
+    const oferta = pacotes.paraVersao(req.params.id, published.version, Number.isFinite(de) ? de : null);
 
     res.json({
         instance: published.instance,
@@ -212,8 +226,45 @@ router.get('/api/instances/:id/version', (req, res) => {
         publishedAt: published.publishedAt,
         changelog: published.changelog,
         fileCount: published.fileCount,
-        totalSize: published.totalSize
+        totalSize: published.totalSize,
+        pacote: oferta ? {
+            tipo: oferta.tipo,
+            de: oferta.de ?? null,
+            arquivos: oferta.arquivos,
+            tamanho: oferta.tamanho,
+            // A parte já publicada fora daqui traz a URL pronta (o CDN); as
+            // demais são servidas por este servidor mesmo.
+            partes: oferta.partes.map(parte => ({
+                url: parte.url || `${PUBLIC_URL}/api/instances/${encodeURIComponent(req.params.id)}/pacotes/${encodeURIComponent(parte.arquivo)}`,
+                tamanho: parte.tamanho,
+                hash: parte.hash
+            }))
+        } : null
     });
+});
+
+/**
+ * Entrega uma parte do pacote.
+ *
+ * Mesma porta de entrada do manifesto: vale o token do jogador ou a assinatura
+ * na URL. Um pacote é o modpack inteiro num arquivo — deixá-lo aberto seria
+ * abrir o que o resto da API protege.
+ */
+router.get('/api/instances/:id/pacotes/:arquivo', blockBanned, (req, res) => {
+    const instances = store.read('instances', []);
+    const instance = instances.find(i => i.id === req.params.id);
+
+    const assinada = SIGNED_URLS &&
+        signed.check(`/api/instances/${req.params.id}/files`, req.query.md5, req.query.expires) === 'ok';
+
+    if (!instance || instance.enabled === false || !(assinada || players.canAccess(instance, req.player))) {
+        return res.status(404).json({ error: 'Modpack não encontrado.' });
+    }
+
+    const caminho = pacotes.caminhoDaParte(req.params.id, req.params.arquivo);
+    if (!caminho) return res.status(404).json({ error: 'Pacote não encontrado.' });
+
+    res.sendFile(caminho);
 });
 
 /* ------------------------------------------------------------ discord -- */

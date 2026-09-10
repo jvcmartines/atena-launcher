@@ -306,5 +306,8 @@
     "modpack.available": "Modpacks disponíveis",
     "modpack.available_text": "Clique em um para jogar nele. O que aparece aqui depende dos seus cargos.",
     "modpack.actions": "Ações",
-    "modpack.checking": "conferindo…"
+    "modpack.checking": "conferindo…",
+    "home.pack_checking": "Conferindo o que já está aqui…",
+    "home.pack_full": "Baixando o modpack {percent}% ({part}/{parts})",
+    "home.pack_delta": "Baixando o que mudou {percent}% ({part}/{parts})"
 }

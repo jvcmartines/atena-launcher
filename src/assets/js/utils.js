@@ -28,6 +28,7 @@ import Pausa from './utils/pausa.js';
 import importar from './utils/importar.js';
 import extras from './utils/extras.js';
 import desempenho from './utils/desempenho.js';
+import pacote from './utils/pacote.js';
 
 /**
  * Fundo de época.
@@ -322,5 +323,6 @@ export {
     Pausa as Pausa,
     importar as importar,
     extras as extras,
-    desempenho as desempenho
+    desempenho as desempenho,
+    pacote as pacote
 }

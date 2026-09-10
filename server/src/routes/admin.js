@@ -14,6 +14,7 @@ const crypto = require('crypto');
 const store = require('../lib/store');
 const auth = require('../lib/auth');
 const manifest = require('../lib/manifest');
+const pacotes = require('../lib/pacotes');
 const filestore = require('../lib/filestore');
 const fetchurl = require('../lib/fetchurl');
 const players = require('../lib/players');
@@ -502,9 +503,12 @@ router.post('/instances/:id/publish', express.json(), wrap(async (req, res) => {
 
     const onProgress = (done, total) => { job.done = done; job.total = total; };
 
+    // A versão anterior precisa ser lida ANTES de publicar: é dela que sai o
+    // delta, e depois de publicar ela já não está em lugar nenhum.
+    const anterior = manifest.readManifest(instance.id);
+
     manifest.publish(instance.id, { author, changelog, onProgress })
-        .then(({ manifest: published, changed }) => {
-            job.state = 'done';
+        .then(async ({ manifest: published, changed }) => {
             job.result = {
                 version: published.version,
                 changed,
@@ -513,6 +517,28 @@ router.post('/instances/:id/publish', express.json(), wrap(async (req, res) => {
                 publishedAt: published.publishedAt
             };
             logAction(req, 'instance.publish', `${instance.id} v${published.version}${changed ? '' : ' (sem mudanças)'}`);
+
+            // Empacotar 1,7 GB leva minutos, e o modpack já está publicado e
+            // funcionando sem isso — o launcher volta ao download arquivo a
+            // arquivo se o pacote não existir. Por isso a falha aqui não
+            // derruba a publicação: ela vira um aviso.
+            if (!changed) return (job.state = 'done');
+
+            job.state = 'empacotando';
+            try {
+                const registro = await pacotes.construir(instance.id, published, anterior,
+                    (fase, feitos, total) => { job.fase = fase; job.done = feitos; job.total = total; });
+
+                job.result.pacote = {
+                    tamanho: registro.pacote?.tamanho || 0,
+                    partes: registro.pacote?.partes.length || 0,
+                    deltas: Object.keys(registro.deltas || {})
+                };
+            } catch (err) {
+                console.error('[pacotes]', err);
+                job.result.pacoteErro = err.message;
+            }
+            job.state = 'done';
         })
         .catch(err => {
             job.state = 'error';
@@ -528,7 +554,7 @@ router.get('/instances/:id/publish', wrap(async (req, res) => {
     const job = jobs.get(instance.id);
 
     if (!job) return res.json({ state: 'idle' });
-    res.json({ state: job.state, done: job.done, total: job.total, result: job.result, error: job.error });
+    res.json({ state: job.state, fase: job.fase || null, done: job.done, total: job.total, result: job.result, error: job.error });
 }));
 
 /* ---------------------------------------------------------------- notícias */

@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho, pacote } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -1015,6 +1015,105 @@ class Home {
         }
     }
 
+    /* --------------------------------------------------- o pacote -------- */
+
+    /**
+     * Baixa o modpack em pacote, quando o servidor oferece um.
+     *
+     * São 5.668 arquivos. Baixá-los um a um custa 5.668 conexões, e o servidor
+     * do Atena entrega 4 MB/s — medi. Como pacote é UM download, e ele pode
+     * morar num CDN que entrega 27 MB/s. É a diferença entre sete minutos e um.
+     *
+     * Não substitui a sincronização: ela roda depois, confere tudo contra o
+     * manifesto e completa o que faltar. O pacote é um atalho, não uma
+     * autoridade — se ele vier pela metade, o passo seguinte conserta.
+     *
+     * Devolve quantos arquivos entraram, ou 0 se não havia pacote.
+     */
+    async baixarPacote(instance, base, oferta, { pausa, infoText, progressBar, speedElement, etaElement }) {
+        if (!oferta?.partes?.length) return 0
+
+        let pasta = modpack.dir(base, instance.name)
+        let arquivos = await modpack.manifest(instance.url)
+
+        // O que a pessoa mexeu não pode ser sobrescrito pelo pacote — mesma
+        // regra da sincronização, só que perguntada de uma vez, antes.
+        infoText.innerHTML = lang.t('home.pack_checking')
+        let meus = await modpack.preservaveis(pasta, arquivos)
+
+        let porCaminho = new Map(arquivos.map(a => [a.path, a]))
+        let escritos = []
+        let bytesAntes = 0
+        let ultimoBytes = 0
+        let ultimoInstante = Date.now()
+
+        for (let i = 0; i < oferta.partes.length; i++) {
+            let parte = oferta.partes[i]
+
+            let resultado = await pacote.baixarEExtrair(parte.url, pasta, {
+                pausa,
+                hashEsperado: parte.hash,
+                tamanhoEsperado: parte.tamanho,
+                decidir: caminho => meus.has(caminho) ? 'pular' : 'gravar',
+                aoProgresso: dados => {
+                    if (pausa.ativa) return
+
+                    let agora = Date.now()
+                    if (agora - (this.ultimoDesenho || 0) < 100) return
+                    this.ultimoDesenho = agora
+
+                    let bytes = bytesAntes + dados.bytes
+                    infoText.innerHTML = lang.t(
+                        oferta.tipo === 'delta' ? 'home.pack_delta' : 'home.pack_full',
+                        {
+                            percent: oferta.tamanho ? ((bytes / oferta.tamanho) * 100).toFixed(0) : '0',
+                            part: i + 1, parts: oferta.partes.length
+                        }
+                    )
+                    progressBar.value = bytes
+                    progressBar.max = oferta.tamanho || 1
+                    ipcRenderer.send('main-window-progress', { progress: bytes, size: oferta.tamanho || 1 })
+
+                    if (agora - ultimoInstante > 700) {
+                        let velocidade = (bytes - ultimoBytes) / ((agora - ultimoInstante) / 1000)
+                        ultimoBytes = bytes
+                        ultimoInstante = agora
+
+                        if (speedElement) speedElement.textContent = `${(velocidade / 131072).toFixed(1)} Mb/s`
+                        if (etaElement && velocidade > 0) {
+                            etaElement.textContent = lang.t('home.eta', {
+                                time: this.tempoCurto(Math.max(0, (oferta.tamanho - bytes) / velocidade))
+                            })
+                        }
+                    }
+                }
+            })
+
+            bytesAntes += parte.tamanho
+            escritos.push(...resultado.escritos)
+        }
+
+        // O hash de cada arquivo que veio no pacote já é conhecido: é o do
+        // manifesto. Passar isso ao cache é o que impede a conferência
+        // seguinte de reler 1,7 GB para descobrir o que o pacote garantiu.
+        let semente = {}
+        for (let relativo of escritos) {
+            let arquivo = porCaminho.get(relativo)
+            if (!arquivo) continue
+
+            try {
+                let stat = await require('fs/promises').stat(require('path').join(pasta, relativo))
+                semente[relativo] = {
+                    size: stat.size, mtimeMs: stat.mtimeMs,
+                    hash: arquivo.hash, servidor: arquivo.hash
+                }
+            } catch { /* sumiu logo depois de escrito: o sync resolve */ }
+        }
+        modpack.semearCache(pasta, semente)
+
+        return escritos.length
+    }
+
     /* ------------------------------------------ a área de progresso ------ */
 
     /**
@@ -1187,6 +1286,21 @@ class Home {
         let ultimoInstante = Date.now()
 
         try {
+            // Se o servidor publicou um pacote, ele vem primeiro: um download
+            // em vez de 5.668. A sincronizacao logo abaixo confere o resultado
+            // e completa o que faltar, entao um pacote incompleto nao quebra
+            // nada — so deixa mais trabalho para ela.
+            let doPacote = 0
+            try {
+                let oferta = (await modpack.remoteVersion(instance.url, versaoAnterior))?.pacote
+                doPacote = await this.baixarPacote(instance, base, oferta, {
+                    pausa, infoText, progressBar, speedElement, etaElement
+                })
+            } catch (err) {
+                if (err?.cancelado) throw err
+                console.error('[pacote] nao consegui usar o pacote, indo arquivo a arquivo:', err.message)
+            }
+
             let resultado = await modpack.sync(base, instance, {
                 ignored: protegidos,
                 concorrencia: Number(configClient?.launcher_config?.download_multi) || 16,
