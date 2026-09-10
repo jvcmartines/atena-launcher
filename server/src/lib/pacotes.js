@@ -185,7 +185,17 @@ function paraVersao(instanceId, versaoAtual, de) {
         }
     }
 
+    // O pacote inteiro só vale a pena de um CDN, e isso é medida, não
+    // opinião: daqui saem 2,9 MB/s numa conexão e ~3,9 MB/s em paralelo. Os
+    // 1,84 GB do pacote numa conexão levariam 10,4 minutos, contra 7,8 do
+    // download arquivo a arquivo que já existe. Oferecê-lo servido por nós
+    // seria trocar uma coisa por outra PIOR.
+    //
+    // O delta é diferente e por isso passa acima: ele são poucos arquivos
+    // pequenos, e aí o custo é o número de conexões, não a banda.
     if (!registro.pacote) return null;
+    if (!registro.pacote.partes.every(parte => parte.url)) return null;
+
     return { tipo: 'pacote', ...registro.pacote };
 }
 
