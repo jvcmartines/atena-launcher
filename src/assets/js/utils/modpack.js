@@ -375,7 +375,17 @@ class Modpack {
         };
 
         const emParalelo = Math.min(32, Math.max(1, Math.round(Number(concorrencia) || 5)));
-        await Promise.all(Array.from({ length: emParalelo }, trabalhar));
+
+        // allSettled, e nao all: `all` devolve no primeiro trabalhador que
+        // desiste, e os outros quinze continuam baixando e gravando em disco
+        // depois de o sync ja ter "terminado". Quem cancelava e comecava outro
+        // download ficava com dois conjuntos de trabalhadores escrevendo na
+        // mesma pasta ao mesmo tempo — que foi exatamente o que apareceu na
+        // tela como "dois modpacks baixando juntos".
+        const resultados = await Promise.allSettled(Array.from({ length: emParalelo }, trabalhar));
+
+        const desistiu = resultados.find(r => r.status === 'rejected');
+        if (desistiu) throw desistiu.reason;
 
         return { baixados, mantidos, bytes, falhas, preservados };
     }

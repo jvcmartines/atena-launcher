@@ -233,13 +233,11 @@ class Home {
         // O catch não é decoração: sem ele, qualquer erro antes da tela mudar
         // deixava o botão vivo e nada acontecia — a pessoa clicava, clicava, e
         // concluía que travou.
-        playBTN.addEventListener('click', () => {
-            let acao = this.packState === 'install' || this.packState === 'update'
+        playBTN.addEventListener('click', () => this.executar(() =>
+            this.packState === 'install' || this.packState === 'update'
                 ? this.updatePack()
                 : this.startGame()
-
-            acao.catch(err => this.falhouAoIniciar(err))
-        })
+        ))
         instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
     }
 
@@ -544,7 +542,7 @@ class Home {
             return
         }
 
-        if (action === 'repair') return this.repairPack(instance, base)
+        if (action === 'repair') return this.executar(() => this.repairPack(instance, base))
         if (action === 'report') return this.reportProblem(instance, base)
         if (action === 'fps') return this.showFps(instance, base)
         if (action === 'extras') return this.showExtras(instance, base)
@@ -1198,8 +1196,8 @@ class Home {
             if (!instance) return
 
             fechar()
-            this.importarDe(instance, await this.basePath(), escolhida)
-                .catch(err => this.falhouAoIniciar(err))
+            let base = await this.basePath()
+            this.executar(() => this.importarDe(instance, base, escolhida))
         })
     }
 
@@ -1237,8 +1235,7 @@ class Home {
         lista.querySelectorAll('.import-item').forEach(linha => {
             linha.addEventListener('click', () => {
                 caixa.style.display = 'none'
-                this.importarDe(instance, base, achados[Number(linha.dataset.i)].caminho)
-                    .catch(err => this.falhouAoIniciar(err))
+                this.executar(() => this.importarDe(instance, base, achados[Number(linha.dataset.i)].caminho))
             })
         })
     }
@@ -1345,6 +1342,28 @@ class Home {
         if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`
         if (n >= 1048576) return `${Math.round(n / 1048576)} MB`
         return `${Math.max(1, Math.round(n / 1024))} KB`
+    }
+
+    /**
+     * Roda uma tarefa longa, e só uma por vez.
+     *
+     * O botão volta a aparecer assim que um download é cancelado, e clicar de
+     * novo começava um segundo download por cima do primeiro — dois conjuntos
+     * de trabalhadores gravando na mesma pasta. A trava é marcada antes de
+     * qualquer `await`, senão dois cliques rápidos passariam os dois.
+     */
+    async executar(tarefa) {
+        if (this.ocupado) return
+        this.ocupado = true
+
+        try {
+            await tarefa()
+        } catch (err) {
+            // Desistir não é falha: quem apertou cancelar já sabe o que houve.
+            if (!err?.cancelado) this.falhouAoIniciar(err)
+        } finally {
+            this.ocupado = false
+        }
     }
 
     /* ------------------------------------------ a área de progresso ------ */
