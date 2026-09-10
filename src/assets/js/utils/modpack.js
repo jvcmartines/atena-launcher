@@ -14,6 +14,7 @@
  */
 
 const fs = require('fs');
+const fsp = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -93,9 +94,17 @@ class Modpack {
 
     /* -------------------------------------------------------- servidor --- */
 
-    /** O manifesto é a lista de arquivos publicada; a URL vem da instância. */
+    /**
+     * O manifesto é a lista de arquivos publicada; a URL vem da instância.
+     *
+     * O cache é indexado pelo endereço SEM a query. A URL vem assinada, e cada
+     * chamada a /api/instances devolve uma assinatura nova — indexar pela URL
+     * inteira faria o cache errar sempre, e o launcher rebaixaria 1,5 MB de
+     * manifesto a cada passo da mesma ação.
+     */
     async manifest(manifestUrl) {
-        if (this.manifestCache.has(manifestUrl)) return this.manifestCache.get(manifestUrl);
+        const chave = String(manifestUrl).split('?')[0];
+        if (this.manifestCache.has(chave)) return this.manifestCache.get(chave);
 
         try {
             const response = await fetch(manifestUrl);
@@ -103,7 +112,7 @@ class Modpack {
 
             const files = await response.json();
             const list = Array.isArray(files) ? files : [];
-            this.manifestCache.set(manifestUrl, list);
+            this.manifestCache.set(chave, list);
             return list;
         } catch (err) {
             console.error('[modpack] não consegui ler o manifesto:', err.message);
@@ -206,43 +215,64 @@ class Modpack {
         const faltando = [];
         let mantidos = 0;
 
-        for (let i = 0; i < arquivos.length; i += 1) {
-            const arquivo = arquivos[i];
-            if (aoProgresso) aoProgresso({ fase: 'conferindo', feitos: i + 1, total: arquivos.length });
+        // Primeira instalação: a pasta nem existe, então não há o que conferir.
+        // Sem este atalho, o launcher gastaria segundos perguntando ao disco por
+        // 5 mil arquivos que com certeza não estão lá.
+        const jaTemPasta = fs.existsSync(pasta);
 
-            // O que o jogador protegeu não é tocado, nem para conferir.
-            if (protegidos.has(arquivo.path)) { mantidos += 1; continue; }
-
-            const completo = path.join(pasta, arquivo.path);
-
-            let stat;
-            try {
-                stat = fs.statSync(completo);
-            } catch {
-                faltando.push(arquivo);
-                continue;
+        if (!jaTemPasta) {
+            faltando.push(...arquivos.filter(a => !protegidos.has(a.path)));
+            mantidos = arquivos.length - faltando.length;
+            if (aoProgresso) {
+                aoProgresso({ fase: 'conferindo', feitos: arquivos.length, total: arquivos.length });
             }
+        } else {
+            for (let i = 0; i < arquivos.length; i += 1) {
+                const arquivo = arquivos[i];
 
-            if (stat.size !== arquivo.size) { faltando.push(arquivo); continue; }
+                // Devolver a vez ao navegador de tempos em tempos. Este laço faz
+                // milhares de idas ao disco; sem as pausas ele segura a thread da
+                // interface do começo ao fim e o launcher parece travado — que foi
+                // exatamente o que aconteceu.
+                if (i % 200 === 0) await this.respirar();
+                if (aoProgresso) aoProgresso({ fase: 'conferindo', feitos: i + 1, total: arquivos.length });
 
-            // O SHA-1 é caro; guardamos o resultado por tamanho+data para a
-            // conferência seguinte custar quase nada. É a diferença entre
-            // esperar minutos toda vez e esperar só na primeira.
-            const chave = arquivo.path;
-            const anotado = cache[chave];
-            let hash;
+                // O que o jogador protegeu não é tocado, nem para conferir.
+                if (protegidos.has(arquivo.path)) { mantidos += 1; continue; }
 
-            if (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs) {
-                hash = anotado.hash;
-            } else {
-                hash = await this.sha1(completo);
-            }
+                const completo = path.join(pasta, arquivo.path);
 
-            if (hash === arquivo.hash) {
-                cacheNovo[chave] = { size: stat.size, mtimeMs: stat.mtimeMs, hash };
-                mantidos += 1;
-            } else {
-                faltando.push(arquivo);
+                let stat;
+                try {
+                    // Assíncrono de propósito: a versão síncrona bloqueia a
+                    // interface a cada arquivo, e são milhares.
+                    stat = await fsp.stat(completo);
+                } catch {
+                    faltando.push(arquivo);
+                    continue;
+                }
+
+                if (stat.size !== arquivo.size) { faltando.push(arquivo); continue; }
+
+                // O SHA-1 é caro; guardamos o resultado por tamanho+data para a
+                // conferência seguinte custar quase nada. É a diferença entre
+                // esperar minutos toda vez e esperar só na primeira.
+                const chave = arquivo.path;
+                const anotado = cache[chave];
+                let hash;
+
+                if (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs) {
+                    hash = anotado.hash;
+                } else {
+                    hash = await this.sha1(completo);
+                }
+
+                if (hash === arquivo.hash) {
+                    cacheNovo[chave] = { size: stat.size, mtimeMs: stat.mtimeMs, hash };
+                    mantidos += 1;
+                } else {
+                    faltando.push(arquivo);
+                }
             }
         }
 
@@ -273,7 +303,7 @@ class Modpack {
                     });
                     baixados += 1;
 
-                    const stat = fs.statSync(path.join(pasta, arquivo.path));
+                    const stat = await fsp.stat(path.join(pasta, arquivo.path));
                     cacheNovo[arquivo.path] = { size: stat.size, mtimeMs: stat.mtimeMs, hash: arquivo.hash };
                 } catch (err) {
                     falhas.push({ path: arquivo.path, erro: err.message });
@@ -285,6 +315,17 @@ class Modpack {
 
         this.writeHashCache(pasta, cacheNovo);
         return { baixados, mantidos, bytes, falhas };
+    }
+
+    /**
+     * Devolve a vez ao navegador para ele desenhar a tela.
+     *
+     * setTimeout(0) e não uma microtarefa: `await Promise.resolve()` não deixa o
+     * navegador repintar, então a barra continuaria congelada mesmo com o laço
+     * "cedendo".
+     */
+    respirar() {
+        return new Promise(resolve => setTimeout(resolve, 0));
     }
 
     /**
@@ -381,11 +422,15 @@ class Modpack {
         for (const file of files) {
             const full = path.join(folder, file.path);
             checked += 1;
+
+            // Mesma razão do sync: milhares de idas ao disco em fila seguram a
+            // interface se o laço nunca devolver a vez.
+            if (checked % 200 === 0) await this.respirar();
             if (onProgress) onProgress(checked, files.length);
 
             let stat;
             try {
-                stat = fs.statSync(full);
+                stat = await fsp.stat(full);
             } catch {
                 missing += 1;             // some sozinho no próximo download
                 continue;

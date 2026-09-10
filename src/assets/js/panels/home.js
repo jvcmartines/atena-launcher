@@ -549,6 +549,12 @@ class Home {
         let resultado
         try {
             resultado = await modpack.repair(base, instance, (feitos, total) => {
+                // Mesmo motivo do updatePack: redesenhar a cada um dos 5 mil
+                // arquivos custa mais que o próprio trabalho.
+                let agora = Date.now()
+                if (feitos !== total && agora - (this.ultimoDesenho || 0) < 100) return
+                this.ultimoDesenho = agora
+
                 infoText.innerHTML = lang.t('home.repairing', {
                     percent: ((feitos / total) * 100).toFixed(0)
                 })
@@ -727,6 +733,14 @@ class Home {
                 ignored: protegidos,
                 concorrencia: configClient?.launcher_config?.download_multi || 5,
                 aoProgresso: dados => {
+                    // Redesenhar a cada arquivo (são milhares) e a cada pedaço
+                    // baixado custa mais que o próprio trabalho. Dez vezes por
+                    // segundo já é mais rápido do que o olho acompanha.
+                    let agora = Date.now()
+                    let ultimo = dados.fase === 'conferindo' && dados.feitos === dados.total
+                    if (!ultimo && agora - (this.ultimoDesenho || 0) < 100) return
+                    this.ultimoDesenho = agora
+
                     if (dados.fase === 'conferindo') {
                         let porcento = ((dados.feitos / dados.total) * 100).toFixed(0)
                         infoText.innerHTML = lang.t('home.checking', { percent: porcento })
@@ -745,7 +759,6 @@ class Home {
                     ipcRenderer.send('main-window-progress', { progress: dados.bytes, size: dados.bytesTotais || 1 })
 
                     // Velocidade e tempo restante a partir do que já veio.
-                    let agora = Date.now()
                     if (agora - ultimoInstante > 700) {
                         let velocidade = (dados.bytes - ultimoBytes) / ((agora - ultimoInstante) / 1000)
                         ultimoBytes = dados.bytes
