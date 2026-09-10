@@ -27,6 +27,7 @@ const path = require('path');
 
 const zip = require('./zip');
 const store = require('./store');
+const github = require('./github');
 const { FILES_DIR, DATA_DIR } = require('../config');
 
 // Abaixo do limite de 2 GB do GitHub com folga para os cabeçalhos do zip.
@@ -113,6 +114,21 @@ async function construir(instanceId, manifesto, anterior, aoProgresso) {
             }
 
             registro.deltas[anterior.version] = delta;
+        }
+    }
+
+    /* --- sobe para o CDN ------------------------------------------------ */
+
+    // Sem token configurado isto e uma nao-operacao, e o pacote fica so aqui —
+    // onde o servidor nao vai anuncia-lo, porque de uma conexao so ele seria
+    // mais lento que o download arquivo a arquivo. Falhar aqui tambem nao
+    // quebra a publicacao: o modpack ja esta publicado e funcionando.
+    if (github.configurado()) {
+        try {
+            await github.publicar(instanceId, registro, pasta,
+                (arquivo, enviados, total) => aoProgresso && aoProgresso('enviando', enviados, total));
+        } catch (err) {
+            console.error('[pacotes] nao consegui subir para o GitHub:', err.message);
         }
     }
 
