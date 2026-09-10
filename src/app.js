@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-const { app, ipcMain, nativeTheme, BrowserWindow, dialog } = require('electron');
+const { app, ipcMain, nativeTheme, BrowserWindow, dialog, Notification } = require('electron');
 const { Microsoft } = require('minecraft-java-core');
 const { autoUpdater } = require('electron-updater')
 
@@ -27,6 +27,43 @@ if (dev) {
 }
 
 Store.initRenderer();
+
+// Sem isto o Windows nao sabe de quem e a notificacao: ela sai sem nome, sem
+// icone, e em algumas maquinas nem sai. O id precisa ser exatamente o appId do
+// electron-builder - que sai do proprio package.json - senao o sistema trata
+// como se fosse outro aplicativo.
+if (process.platform === 'win32') {
+    try {
+        app.setAppUserModelId(require('../package.json').preductname);
+    } catch {
+        app.setAppUserModelId('Atena Launcher');
+    }
+}
+
+/**
+ * Um aviso do sistema operacional.
+ *
+ * Serve para quem deixou o launcher aberto atras de outra janela: sem isto a
+ * pessoa so descobre que saiu modpack novo quando volta a olhar.
+ *
+ * Clicar traz o launcher para a frente - uma notificacao que nao leva a lugar
+ * nenhum e so barulho.
+ */
+function notificar(titulo, corpo) {
+    if (!Notification.isSupported()) return;
+
+    const aviso = new Notification({ title: titulo, body: corpo, silent: false });
+    aviso.on('click', () => {
+        const janela = MainWindow.getWindow();
+        if (!janela) return;
+        if (janela.isMinimized()) janela.restore();
+        janela.show();
+        janela.focus();
+    });
+    aviso.show();
+}
+
+ipcMain.on('notificar', (_, dados) => notificar(dados?.titulo || 'Atena', dados?.corpo || ''));
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(() => {
@@ -143,14 +180,31 @@ ipcMain.handle('update-app', async () => {
     })
 })
 
-autoUpdater.on('update-available', () => {
+autoUpdater.on('update-available', info => {
     const updateWindow = UpdateWindow.getWindow();
-    if (updateWindow) updateWindow.webContents.send('updateAvailable');
+    if (updateWindow) return updateWindow.webContents.send('updateAvailable');
+
+    // Sem a janela de abertura, a checagem veio do relogio la de baixo: a
+    // pessoa esta com o launcher aberto e nao esta olhando para ele.
+    if (MainWindow.getWindow()) {
+        MainWindow.getWindow().webContents.send('launcher-update', info?.version || '');
+    }
 });
 
 ipcMain.on('start-update', () => {
     autoUpdater.downloadUpdate();
 })
+
+// De hora em hora, enquanto o launcher estiver aberto. Antes a unica checagem
+// era na tela de abertura, entao quem deixa o launcher aberto o dia todo so
+// via a versao nova no dia seguinte.
+const UMA_HORA = 60 * 60 * 1000;
+setInterval(() => {
+    if (!MainWindow.getWindow()) return;
+    autoUpdater.checkForUpdates().catch(err => {
+        console.error('[update] checagem periodica falhou:', err?.message || err);
+    });
+}, UMA_HORA);
 
 autoUpdater.on('update-not-available', () => {
     const updateWindow = UpdateWindow.getWindow();

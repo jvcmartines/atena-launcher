@@ -230,6 +230,7 @@ class Modpack {
         /* --- 1. o que precisa vir do servidor ------------------------------ */
 
         const faltando = [];
+        const preservados = [];
         let mantidos = 0;
 
         // Primeira instalação: a pasta nem existe, então não há o que conferir.
@@ -272,27 +273,57 @@ class Modpack {
                     continue;
                 }
 
-                if (stat.size !== arquivo.size) { faltando.push(arquivo); continue; }
-
                 // O SHA-1 é caro; guardamos o resultado por tamanho+data para a
                 // conferência seguinte custar quase nada. É a diferença entre
                 // esperar minutos toda vez e esperar só na primeira.
                 const chave = arquivo.path;
                 const anotado = cache[chave];
-                let hash;
 
-                if (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs) {
-                    hash = anotado.hash;
-                } else {
-                    hash = await this.sha1(completo);
+                // O que o servidor publicava na última sincronização. É a peça
+                // que permite saber DE QUEM foi a mudança. Entradas antigas do
+                // cache guardavam só `hash`, que na época era exatamente isso.
+                const servidorAntes = anotado ? (anotado.servidor ?? anotado.hash) : null;
+
+                let hash = null;
+
+                // O tamanho é a peneira barata: só vale ler o arquivo inteiro
+                // de quem passou por ela.
+                if (stat.size === arquivo.size) {
+                    hash = (anotado && anotado.size === stat.size && anotado.mtimeMs === stat.mtimeMs)
+                        ? anotado.hash
+                        : await this.sha1(completo);
+
+                    if (hash === arquivo.hash) {
+                        cacheNovo[chave] = { size: stat.size, mtimeMs: stat.mtimeMs, hash, servidor: arquivo.hash };
+                        mantidos += 1;
+                        continue;
+                    }
                 }
 
-                if (hash === arquivo.hash) {
-                    cacheNovo[chave] = { size: stat.size, mtimeMs: stat.mtimeMs, hash };
+                // Chegou aqui: o arquivo em disco não é o publicado. A pergunta
+                // que importa é quem o mudou.
+                //
+                // Se o servidor publica hoje o MESMO hash que publicava na
+                // última sincronização, então a staff não mexeu neste arquivo —
+                // quem mexeu foi a pessoa, jogando. Sobrescrever isso é apagar
+                // as configurações dela toda vez que o modpack atualiza, que é
+                // exatamente o que estava acontecendo.
+                //
+                // Se o hash publicado mudou, a atualização é de verdade e ela
+                // ganha: é o que "atualizar o modpack" quer dizer.
+                if (servidorAntes !== null && servidorAntes === arquivo.hash && this.doJogador(arquivo.path)) {
+                    cacheNovo[chave] = {
+                        size: stat.size,
+                        mtimeMs: stat.mtimeMs,
+                        hash: hash ?? await this.sha1(completo),
+                        servidor: arquivo.hash
+                    };
                     mantidos += 1;
-                } else {
-                    faltando.push(arquivo);
+                    preservados.push(arquivo.path);
+                    continue;
                 }
+
+                faltando.push(arquivo);
             }
         }
 
@@ -305,10 +336,18 @@ class Modpack {
         const falhas = [];
 
         const trabalhar = async () => {
-            while (proximo < faltando.length) {
+            while (true) {
                 // Entre um arquivo e outro é onde parar não custa nada: nada
                 // pela metade em disco, nada baixado duas vezes.
                 if (pausa) await pausa.esperar();
+
+                // A conferência do fim da fila TEM que vir depois da espera.
+                // Estava antes, e o `await` no meio abria uma janela: com 16
+                // trabalhadores, vários passavam pelo teste enquanto sobrava um
+                // arquivo só, e os perdedores pegavam `undefined` — o download
+                // inteiro morria com "Cannot read properties of undefined" a
+                // poucos arquivos do fim. Apareceu no log de um jogador.
+                if (proximo >= faltando.length) break;
 
                 const arquivo = faltando[proximo++];
                 try {
@@ -338,7 +377,25 @@ class Modpack {
         const emParalelo = Math.min(32, Math.max(1, Math.round(Number(concorrencia) || 5)));
         await Promise.all(Array.from({ length: emParalelo }, trabalhar));
 
-        return { baixados, mantidos, bytes, falhas };
+        return { baixados, mantidos, bytes, falhas, preservados };
+    }
+
+    /**
+     * Este arquivo pode ser do jogador?
+     *
+     * Tudo pode, menos os .jar e a pasta mods/. Ninguém edita um .jar à mão, e
+     * um jar corrompido precisa poder ser rebaixado sozinho — se ele entrasse
+     * nesta regra, o launcher passaria a preservar arquivos quebrados achando
+     * que eram escolhas de alguém.
+     *
+     * Para tudo o mais — config, emotes, resourcepacks, teclas — a regra é a
+     * pessoa mandar. "Verificar e reparar" continua devolvendo tudo ao
+     * publicado, para quando é isso que se quer.
+     */
+    doJogador(caminho) {
+        const limpo = String(caminho).replace(/\\/g, '/').toLowerCase();
+        if (limpo.startsWith('mods/')) return false;
+        return !limpo.endsWith('.jar');
     }
 
     /**
@@ -525,6 +582,12 @@ class Modpack {
                 .map(entry => String(entry).replace(/\\/g, '/').split('/')[0])
                 .filter(Boolean)
         );
+
+        // Os marcadores do launcher nao sao do modpack. Sem eles, reinstalar
+        // fazia o FPS Boost perder os valores originais: o ajuste continuava
+        // ligado nos arquivos e nao havia mais como desfazer.
+        preserved.add('.atena-fps.json');
+        preserved.add('.atena-extras.json');
 
         let removed = 0;
         let kept = 0;

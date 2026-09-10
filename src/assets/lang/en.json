@@ -257,7 +257,6 @@
     "import.empty": "Nothing in that folder matched this modpack. Nothing was copied.",
     "import.same_folder": "That is the folder this launcher already uses.",
     "import.no_manifest": "Could not read the modpack file list. Check your connection and try again.",
-    "home.autojoin": "Join the server automatically",
     "home.playtime": "{hours}h",
     "home.cancel": "Cancel",
     "home.cancelling": "Stopping…",
@@ -295,5 +294,13 @@
     "fps.culling": "Entity culling",
     "fps.shaders": "Shaders",
     "home.playtime_rank": "#{position} of {total} in hours played on Atena",
-    "home.backup_progress": "Backing up your files… {percent}%"
+    "home.backup_progress": "Backing up your files… {percent}%",
+    "home.sync_kept": "{count} file(s) you had changed were left alone — your settings stayed as you set them.",
+    "home.autojoin_short": "Join direct",
+    "notify.pack_title": "New modpack version",
+    "notify.pack_text": "v{version} is out. Open the launcher and press Update.",
+    "notify.launcher_title": "New launcher version",
+    "notify.launcher_text": "v{version} is available. It installs the next time you open the launcher.",
+    "home.badge_update": "update available",
+    "home.badge_ready": "installed"
 }

@@ -257,7 +257,6 @@
     "import.empty": "Nada naquela pasta bateu com este modpack. Não copiei nada.",
     "import.same_folder": "Essa é a pasta que este launcher já usa.",
     "import.no_manifest": "Não consegui ler a lista de arquivos do modpack. Confira a internet e tente de novo.",
-    "home.autojoin": "Entrar no servidor automaticamente",
     "home.playtime": "{hours}h",
     "home.cancel": "Cancelar",
     "home.cancelling": "Parando…",
@@ -295,5 +294,13 @@
     "fps.culling": "Descarte de entidades",
     "fps.shaders": "Shaders",
     "home.playtime_rank": "{position}º de {total} em horas jogadas no Atena",
-    "home.backup_progress": "Guardando uma cópia dos seus arquivos… {percent}%"
+    "home.backup_progress": "Guardando uma cópia dos seus arquivos… {percent}%",
+    "home.sync_kept": "{count} arquivo(s) que você tinha mexido ficaram como estavam — as suas configurações continuam as suas.",
+    "home.autojoin_short": "Entrar direto",
+    "notify.pack_title": "Modpack novo",
+    "notify.pack_text": "Saiu a v{version}. Abra o launcher e aperte Atualizar.",
+    "notify.launcher_title": "Launcher novo",
+    "notify.launcher_text": "A v{version} está disponível. Ela se instala da próxima vez que você abrir o launcher.",
+    "home.badge_update": "tem atualização",
+    "home.badge_ready": "instalado"
 }

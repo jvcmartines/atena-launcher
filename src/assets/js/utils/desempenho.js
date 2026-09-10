@@ -258,7 +258,11 @@ class Desempenho {
                     if (novo === undefined) continue;
 
                     const antes = this.fundo(dados, ajuste.chave);
-                    if (anotarEm) anotarEm[`${ajuste.arquivo}|${ajuste.chave}`] = antes;
+                    // Se o valor de agora JA e o do boost, ele nao serve de
+                    // original: guardar isso faria "desligar" devolver o
+                    // proprio boost e dizer que desfez. Nao saber e melhor que
+                    // saber errado.
+                    if (anotarEm && antes !== novo) anotarEm[`${ajuste.arquivo}|${ajuste.chave}`] = antes;
                     if (antes === novo) continue;
 
                     this.definirFundo(dados, ajuste.chave, novo);
@@ -279,7 +283,11 @@ class Desempenho {
                 if (novo === undefined) continue;
 
                 const antes = atuais.get(ajuste.chave);
-                if (anotarEm) anotarEm[`${ajuste.arquivo}|${ajuste.chave}`] = antes;
+                // Mesma razao do bloco acima: valor que ja e o do boost nao e
+                // original de ninguem.
+                if (anotarEm && String(antes) !== String(novo)) {
+                    anotarEm[`${ajuste.arquivo}|${ajuste.chave}`] = antes;
+                }
                 if (String(antes) === String(novo)) continue;
 
                 mudancas.set(ajuste.chave, novo);

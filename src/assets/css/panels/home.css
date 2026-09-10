@@ -144,61 +144,44 @@
     }
 }
 
-/* Ao lado do botão: as opções do modpack. Deixou de ser uma engrenagem —
-   havia duas engrenagens iguais na tela, e a de baixo era as configurações
-   do launcher. */
-.pack-menu-btn {
-    display: grid;
-    place-items: center;
-    width: 56px;
-    flex-shrink: 0;
-    color: var(--color-dim);
-    background: var(--glass);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid var(--stroke);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: var(--transition);
+/* --------------------------------------------- interruptores do jogo --- */
+
+/* Tres decisoes que se tomam na hora de jogar. Ficam em linha, embaixo do
+   botao: empilhadas ocupariam mais tela que o proprio botao. */
+.toggles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    margin-top: 16px;
 }
 
-.pack-menu-icon {
-    width: 21px;
-    height: 21px;
-    background-color: currentColor;
-    pointer-events: none;
-    -webkit-mask: var(--ico-pack) no-repeat center / contain;
-    mask: var(--ico-pack) no-repeat center / contain;
-}
-
-.pack-menu-btn:hover {
-    color: var(--gold);
-    border-color: var(--stroke-strong);
-}
-
-/* ------------------------------------------- entrar direto no servidor - */
-
-.autojoin {
+.toggle {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 16px;
-    font-size: 11.5px;
+    gap: 8px;
+    font-size: 11px;
     color: var(--color-dim);
     cursor: pointer;
     user-select: none;
+    transition: var(--transition);
 }
 
-.autojoin-input {
+.toggle[hidden] {
+    display: none;
+}
+
+.toggle-input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.autojoin-switch {
+.toggle-switch {
     position: relative;
-    width: 34px;
-    height: 19px;
+    width: 30px;
+    height: 17px;
     flex-shrink: 0;
     background: var(--background-element);
     border: 1px solid var(--stroke);
@@ -206,34 +189,41 @@
     transition: var(--transition);
 }
 
-.autojoin-switch::after {
+.toggle-switch::after {
     content: '';
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 13px;
-    height: 13px;
+    width: 11px;
+    height: 11px;
     background: var(--color-faint);
     border-radius: 50%;
     transition: var(--transition);
 }
 
-.autojoin-input:checked+.autojoin-switch {
+.toggle-input:checked+.toggle-switch {
     background: linear-gradient(180deg, var(--gold-200), var(--gold-600));
     border-color: transparent;
 }
 
-.autojoin-input:checked+.autojoin-switch::after {
-    left: 17px;
+.toggle-input:checked+.toggle-switch::after {
+    left: 15px;
     background: var(--wine-900);
 }
 
-.autojoin:hover .autojoin-text {
+.toggle:hover .toggle-text {
     color: var(--color);
 }
 
-.autojoin-input:checked~.autojoin-text {
+.toggle-input:checked~.toggle-text {
     color: var(--gold);
+}
+
+/* Enquanto o interruptor esta trabalhando - o Essential renomeia um .jar de
+   50 MB, o FPS Boost reescreve tres arquivos - ele para de aceitar clique. */
+.toggle.ocupado {
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 /* ------------------------------------------------------- horas jogadas - */
@@ -543,6 +533,11 @@
     mask-image: url('../../images/svgs/web.svg');
 }
 
+.ico-pack {
+    -webkit-mask-image: var(--ico-pack);
+    mask-image: var(--ico-pack);
+}
+
 .ico-support {
     -webkit-mask-image: var(--ico-support);
     mask-image: var(--ico-support);
@@ -608,60 +603,112 @@
     background: var(--background-element);
 }
 
-/* resumo: qual modpack e em que estado ele está */
-.pack-summary {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding-bottom: 13px;
-    margin-bottom: 13px;
-    border-bottom: 1px solid var(--stroke);
-}
-
-.current-instance-name {
-    font-size: 20px;
-    font-weight: 700;
-    background: linear-gradient(180deg, var(--gold-100) 0%, var(--gold) 48%, var(--gold-600) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.pack-state {
-    font-size: 11.5px;
-    color: var(--color-dim);
-}
-
 .instances-List {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+/* Cada modpack e um cartao com capa. Antes era uma lista de nomes em texto -
+   funciona com um pack, mas nao diz nada sobre o que a pessoa esta escolhendo. */
+.instance-elements {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 34vh;
-    margin-bottom: 16px;
-    padding-right: 6px;
-}
-
-.instance-elements {
-    padding: 13px 16px;
-    font-size: 14px;
-    font-weight: 700;
+    justify-content: flex-end;
+    height: 74px;
+    padding: 9px;
+    overflow: hidden;
+    text-align: left;
     background: var(--background-element);
-    border: 1px solid transparent;
+    border: 1px solid var(--stroke);
     border-radius: 12px;
     cursor: pointer;
     transition: var(--transition);
 }
 
-.instance-elements:hover {
-    border-color: var(--stroke-strong);
-    transform: translateX(4px);
+/* A capa. Sem imagem publicada, o proprio degrade da marca faz as vezes. */
+.instance-art {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    transition: var(--transition);
+    pointer-events: none;
 }
 
-.active-instance {
-    color: var(--gold);
+/* Sem capa publicada: a inicial do nome, grande e apagada, encostada na
+   direita. Centralizada ela batia de frente com o nome do pack; aqui ela e
+   textura, nao texto. */
+.instance-art.sem-foto {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-size: 52px;
+    line-height: 1;
+    font-weight: 700;
+    color: rgba(242, 199, 92, 0.16);
+    background: linear-gradient(140deg, var(--wine-600), var(--wine-800));
+    opacity: 1;
+}
+
+/* Escurece a base para o nome nunca disputar com a imagem. */
+.instance-elements::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 30%, rgba(9, 2, 5, 0.9) 100%);
+    pointer-events: none;
+}
+
+.instance-elements:hover {
     border-color: var(--stroke-strong);
-    background: linear-gradient(90deg, rgba(242, 199, 92, 0.16), transparent);
+    transform: translateY(-3px);
+}
+
+.instance-elements:hover .instance-art {
+    opacity: 0.75;
+    transform: scale(1.05);
+}
+
+.instance-name {
+    position: relative;
+    z-index: 1;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    pointer-events: none;
+}
+
+/* O estado do pack no proprio cartao: instalado, atualizacao, nao baixado. */
+.instance-badge {
+    position: relative;
+    z-index: 1;
+    margin-top: 3px;
+    font-size: 9.5px;
+    color: var(--color-faint);
+    pointer-events: none;
+}
+
+.instance-badge.novo {
+    color: var(--gold);
+}
+
+/* O escolhido: borda dourada e a capa acesa. */
+.active-instance {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px rgba(242, 199, 92, 0.35);
+}
+
+.active-instance .instance-art {
+    opacity: 0.8;
+}
+
+.active-instance .instance-name {
+    color: var(--gold);
 }
 
 /* ------------------------------------------ acoes do modpack ---------- */
@@ -677,7 +724,7 @@
 
 .pack-action {
     position: relative;
-    padding: 12px 14px 13px;
+    padding: 11px 13px 12px;
     background: var(--background-element);
     border: 1px solid var(--stroke);
     border-radius: 14px;

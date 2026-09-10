@@ -14,21 +14,36 @@
         </div>
 
         <div class="play-elements">
+            <!-- So o botao. O de opcoes do modpack ficava colado aqui do lado,
+                 e os dois juntos eram centralizados como um par - o que deixava
+                 o JOGAR visivelmente fora do meio da tela. Ele foi para a barra,
+                 junto dos outros botoes de servico. -->
             <div class="play-instance">
                 <button class="play-btn" data-i18n="home.play"></button>
-                <div class="pack-menu-btn" data-i18n-title="home.pack_options">
-                    <span class="pack-menu-icon"></span>
-                </div>
             </div>
 
-            <!-- Entrar direto no servidor, sem passar pelo menu de multijogador.
-                 Estava escondido nas configuracoes; e uma decisao que se toma na
-                 hora de jogar, entao mora aqui. -->
-            <label class="autojoin">
-                <input type="checkbox" class="autojoin-input">
-                <span class="autojoin-switch"></span>
-                <span class="autojoin-text" data-i18n="home.autojoin"></span>
-            </label>
+            <!-- As tres decisoes que se tomam na hora de jogar, e nao uma vez
+                 na vida: entrar direto, jogar leve, jogar com o Essential.
+                 Estavam espalhadas entre as configuracoes e o menu do modpack. -->
+            <div class="toggles">
+                <label class="toggle" data-toggle="autojoin">
+                    <input type="checkbox" class="toggle-input autojoin-input">
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-text" data-i18n="home.autojoin_short"></span>
+                </label>
+
+                <label class="toggle" data-toggle="fps" hidden>
+                    <input type="checkbox" class="toggle-input fps-input">
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-text" data-i18n="fps.title"></span>
+                </label>
+
+                <label class="toggle" data-toggle="essential" hidden>
+                    <input type="checkbox" class="toggle-input essential-input">
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-text"></span>
+                </label>
+            </div>
 
             <div class="info-starting-game">
                 <div class="info-starting-game-text" data-i18n="home.connecting"></div>
@@ -83,6 +98,10 @@
 
             <div class="bar-sep"></div>
 
+            <div class="bar-btn pack-menu-btn" data-i18n-title="home.pack_options">
+                <span class="bar-icon ico-pack"></span>
+            </div>
+
             <div class="bar-btn news-btn" data-i18n-title="news.title">
                 <span class="bar-icon ico-news"></span>
                 <span class="news-dot" hidden></span>
@@ -128,12 +147,12 @@
             <div class="close-popup icon-close"></div>
             <p data-i18n="home.pack_options"></p>
 
-            <div class="pack-summary">
-                <span class="current-instance-name">Atena</span>
-                <span class="pack-state"></span>
-            </div>
-
-            <div class="instances-List content-scroll"></div>
+            <!-- O resumo "Atena - nao instalado" saiu daqui: o cartao abaixo
+                 ja diz o nome e o estado, e a linha repetida custava a altura
+                 que fazia o menu voltar a rolar. -->
+            <!-- Um cartao por modpack liberado para esta pessoa, com capa.
+                 Some quando so ha um: nao ha o que escolher. -->
+            <div class="instances-List"></div>
 
             <!-- Grade em vez de lista: sete paragrafos empilhados viravam uma
                  parede de texto que ninguem lia ate o fim. Aqui cada acao e um

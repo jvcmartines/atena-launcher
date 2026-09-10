@@ -128,6 +128,9 @@ function toLauncherInstance(instance, publicUrl) {
     return {
         name: instance.id,
         displayName: instance.displayName || instance.name || instance.id,
+        // Capa do modpack, mostrada no cartao do launcher. Opcional: sem ela o
+        // launcher desenha a inicial do nome sobre o degrade da marca.
+        image: instance.image || null,
         url: `${publicUrl}/api/instances/${encodeURIComponent(instance.id)}/files`,
         loader: {
             minecraft_version: instance.loader?.minecraft_version || '1.20.1',

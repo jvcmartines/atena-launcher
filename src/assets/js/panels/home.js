@@ -38,8 +38,9 @@ class Home {
         this.extrasPopup()
         this.importPopup()
         this.fpsPopup()
-        this.autoJoin()
+        this.interruptores()
         this.mostrarHoras()
+        this.vigia()
         this.contaBotao()
         this.suporteBotao()
         this.richPresence()
@@ -117,8 +118,8 @@ class Home {
             return this.blockPlay(lang.t('blocked.no_pack_title'), lang.t('blocked.no_pack_text'))
         }
 
-        // Com um modpack só não há o que escolher: a lista some do popup.
-        if (instancesList.length <= 1) instancesListPopup.style.display = 'none'
+        // A lista fica mesmo com um modpack so: o cartao continua dizendo qual
+        // e e em que estado esta, o que a lista de nomes em texto nao dizia.
 
         if (!instanceSelect) {
             // Prefere um aberto; se todos tem whitelist, fica com o primeiro
@@ -154,12 +155,15 @@ class Home {
         instancePopup.addEventListener('click', async e => {
             let configClient = await this.db.readData('configClient')
 
-            if (e.target.classList.contains('instance-elements')) {
-                let newInstanceSelect = e.target.id
+            // O cartao tem filhos (capa, nome, selo), entao o clique pode
+            // chegar em qualquer um deles.
+            let cartao = e.target.closest('.instance-elements')
+            if (cartao) {
+                let newInstanceSelect = cartao.id
                 let activeInstanceSelect = document.querySelector('.active-instance')
 
-                if (activeInstanceSelect) activeInstanceSelect.classList.toggle('active-instance');
-                e.target.classList.add('active-instance');
+                if (activeInstanceSelect) activeInstanceSelect.classList.remove('active-instance');
+                cartao.classList.add('active-instance');
 
                 configClient.instance_select = newInstanceSelect
                 await this.db.updateData('configClient', configClient)
@@ -171,9 +175,8 @@ class Home {
                 await this.refreshState(options)
             }
 
-            if (e.target.classList.contains('pack-action')) {
-                this.packAction(e.target.dataset.action)
-            }
+            let acao = e.target.closest('.pack-action')
+            if (acao) this.packAction(acao.dataset.action)
         })
 
         packMenuBTN.addEventListener('click', async () => {
@@ -181,14 +184,43 @@ class Home {
             let instanceSelect = configClient.instance_select
             let auth = await this.db.readData('accounts', configClient.account_selected)
 
+            // Um cartao por modpack, com capa. A capa vem do servidor quando a
+            // staff publica uma; sem ela, a inicial do nome sobre o degrade da
+            // marca — melhor que um retangulo vazio, e nao inventa imagem.
+            let base = await this.basePath()
             instancesListPopup.innerHTML = ''
+
             for (let instance of instancesList) {
                 let visible = !instance.whitelistActive || instance.whitelist.includes(auth?.name)
                 if (!visible) continue
 
                 let active = instance.name == instanceSelect ? ' active-instance' : ''
                 let label = instance.displayName || instance.name
-                instancesListPopup.innerHTML += `<div id="${instance.name}" class="instance-elements${active}">${label}</div>`
+                let arte = instance.image
+                    ? `<div class="instance-art" style="background-image:url('${this.escapar(instance.image)}')"></div>`
+                    : `<div class="instance-art sem-foto">${this.escapar(label.trim()[0] || '?')}</div>`
+
+                instancesListPopup.innerHTML += `
+                    <div id="${instance.name}" class="instance-elements${active}">
+                        ${arte}
+                        <span class="instance-name">${this.escapar(label)}</span>
+                        <span class="instance-badge" data-pack="${this.escapar(instance.name)}"></span>
+                    </div>`
+            }
+
+            // O estado de cada um entra depois: sao chamadas de rede, e a lista
+            // nao pode esperar por elas para aparecer.
+            for (let instance of instancesList) {
+                let selo = instancesListPopup.querySelector(`.instance-badge[data-pack="${instance.name}"]`)
+                if (!selo) continue
+
+                modpack.state(base, instance).then(estado => {
+                    selo.textContent = lang.t(
+                        estado === 'install' ? 'home.state_install'
+                            : estado === 'update' ? 'home.badge_update' : 'home.badge_ready'
+                    )
+                    selo.classList.toggle('novo', estado !== 'ready')
+                }).catch(() => { })
             }
 
             instancePopup.style.display = 'flex'
@@ -690,28 +722,170 @@ class Home {
         return ['--quickPlayMultiplayer', porta === 25565 ? ip : `${ip}:${porta}`]
     }
 
-    /* -------------------------------------------- entrar direto ---------- */
+    /* ------------------------------------- interruptores do jogo --------- */
 
     /**
-     * "Entrar no servidor automaticamente", embaixo do botão de jogar.
+     * Os três interruptores embaixo do botão: entrar direto, FPS Boost,
+     * Essential.
      *
-     * A opção já existia, escondida nas configurações. Mas é uma decisão que
-     * se toma na hora de jogar — hoje quero entrar direto, hoje quero abrir o
-     * mundo single-player — e não algo que se configura uma vez na vida. Por
-     * isso ela subiu para cá; as duas telas escrevem o mesmo valor.
+     * Todos os três já existiam, cada um escondido num canto diferente — um
+     * nas configurações, dois no menu do modpack. Só que nenhum deles é uma
+     * decisão que se toma uma vez na vida: hoje quero entrar direto, hoje o
+     * computador está pesado, hoje quero jogar sem cosméticos. Decisão que se
+     * revê toda partida mora ao lado do botão de jogar.
+     *
+     * Os do modpack mexem em disco, então ficam escondidos até dar para saber
+     * se são possíveis — e travam enquanto trabalham.
      */
-    async autoJoin() {
+    async interruptores() {
+        let instance = await this.currentInstance()
+        let base = await this.basePath()
+
+        await this.ligarAutoJoin()
+        if (!instance) return
+
+        await this.ligarFps(instance, base)
+        await this.ligarEssential(instance, base)
+    }
+
+    /** Entrar no servidor sem passar pelo menu de multijogador. */
+    async ligarAutoJoin() {
         let campo = document.querySelector('.autojoin-input')
         if (!campo) return
 
         let config = await this.db.readData('configClient')
         campo.checked = config?.launcher_config?.quickPlay !== false
+        document.querySelector('[data-toggle="autojoin"]')?.removeAttribute('hidden')
 
         campo.addEventListener('change', async () => {
             let config = await this.db.readData('configClient')
             config.launcher_config.quickPlay = campo.checked
             await this.db.updateData('configClient', config)
         })
+    }
+
+    /** FPS Boost. Só aparece quando há arquivos onde mexer. */
+    async ligarFps(instance, base) {
+        let campo = document.querySelector('.fps-input')
+        let linha = document.querySelector('[data-toggle="fps"]')
+        if (!campo || !linha) return
+
+        let pasta = modpack.dir(base, instance.name)
+        let estado = await desempenho.estado(pasta)
+
+        // Antes da primeira partida o Minecraft ainda não escreveu nada: um
+        // interruptor que não faria efeito é pior que interruptor nenhum.
+        if (!estado.possivel) return
+
+        campo.checked = estado.ligado
+        linha.hidden = false
+
+        campo.addEventListener('change', async () => {
+            linha.classList.add('ocupado')
+            try {
+                if (campo.checked) await desempenho.ligar(pasta)
+                else await desempenho.desligar(pasta)
+            } catch (err) {
+                console.error('[fps] falhou pelo interruptor:', err)
+                campo.checked = !campo.checked   // não mente sobre o que está valendo
+            } finally {
+                linha.classList.remove('ocupado')
+            }
+        })
+    }
+
+    /** Jogar com ou sem o Essential (ou o que mais estiver no catálogo). */
+    async ligarEssential(instance, base) {
+        let campo = document.querySelector('.essential-input')
+        let linha = document.querySelector('[data-toggle="essential"]')
+        if (!campo || !linha) return
+
+        let arquivos = await modpack.manifest(instance.url)
+        let itens = await extras.estado(base, instance, arquivos)
+
+        // Só o que já está em disco vira interruptor: baixar 50 MB não é coisa
+        // para acontecer atrás de um clique sem aviso. Para isso existe a
+        // lista completa no menu do modpack.
+        let item = itens.find(i => !i.ausente && i.disponivel)
+        if (!item) return
+
+        campo.checked = item.ligado
+        linha.querySelector('.toggle-text').textContent = item.nome
+        linha.hidden = false
+
+        campo.addEventListener('change', async () => {
+            linha.classList.add('ocupado')
+            try {
+                await extras.alternar(base, instance, item.id, campo.checked)
+                item.ligado = campo.checked
+            } catch (err) {
+                console.error('[extras] falhou pelo interruptor:', err)
+                campo.checked = !campo.checked
+            } finally {
+                linha.classList.remove('ocupado')
+            }
+        })
+    }
+
+    /* -------------------------------------------------------- a vigia ---- */
+
+    /**
+     * Fica de olho no modpack enquanto o launcher está aberto.
+     *
+     * Antes a versão publicada era lida uma vez, na abertura. Quem deixa o
+     * launcher aberto — e é o normal, ele fica ali atrás do navegador — só
+     * descobria que saiu modpack novo fechando e abrindo. Agora o botão muda
+     * sozinho, e o sistema avisa.
+     *
+     * A notificação sai uma vez por versão: repetir a cada checagem seria
+     * transformar um aviso útil em algo que se aprende a ignorar.
+     */
+    vigia() {
+        const DE_CINCO_EM_CINCO = 5 * 60 * 1000
+
+        // Avisos do launcher (a checagem em si mora no processo principal).
+        ipcRenderer.on('launcher-update', (_, versao) => {
+            if (this.avisadoLauncher === versao) return
+            this.avisadoLauncher = versao
+
+            ipcRenderer.send('notificar', {
+                titulo: lang.t('notify.launcher_title'),
+                corpo: lang.t('notify.launcher_text', { version: versao || '' })
+            })
+        })
+
+        setInterval(() => this.conferirModpack(), DE_CINCO_EM_CINCO)
+    }
+
+    async conferirModpack() {
+        // No meio de um download não é hora: o estado está mudando de qualquer
+        // forma, e trocar o texto do botão por baixo atrapalharia.
+        if (this.pausaAtual) return
+
+        try {
+            let instance = await this.currentInstance()
+            if (!instance) return
+
+            let remote = await modpack.remoteVersion(instance.url)
+            if (!remote?.version) return
+
+            let local = modpack.readLocal(await this.basePath(), instance.name)
+            if (!local || local.version === remote.version) return
+
+            // O botão passa a dizer Atualizar sem ninguém reiniciar nada.
+            await this.refreshState(instance)
+
+            if (this.avisadoModpack === remote.version) return
+            this.avisadoModpack = remote.version
+
+            ipcRenderer.send('notificar', {
+                titulo: lang.t('notify.pack_title'),
+                corpo: lang.t('notify.pack_text', { version: remote.version })
+            })
+        } catch (err) {
+            // Sem internet a vigia simplesmente não faz nada nesta rodada.
+            console.error('[vigia] não consegui conferir o modpack:', err.message)
+        }
     }
 
     /* ---------------------------------------------- horas jogadas -------- */
@@ -1416,7 +1590,12 @@ class Home {
             } else {
                 new popup().openPopup({
                     title: lang.t(anterior === 'install' ? 'home.install' : 'home.update'),
-                    content: lang.t('home.sync_done', { count: resultado.baixados }),
+                    content: lang.t('home.sync_done', { count: resultado.baixados }) +
+                        // Dizer que os arquivos da pessoa ficaram e o que
+                        // transforma "confie em mim" em algo verificavel.
+                        (resultado.preservados?.length
+                            ? '<br><br>' + lang.t('home.sync_kept', { count: resultado.preservados.length })
+                            : ''),
                     color: 'var(--success)',
                     options: true
                 })
@@ -1506,7 +1685,15 @@ class Home {
         ]
 
         let opt = {
-            url: options.url,
+            // A sincronizacao do modpack e nossa. Passar a URL aqui faria a
+            // biblioteca conferir os 5.668 arquivos DE NOVO e, pior, rebaixar
+            // por cima de tudo que a pessoa tiver mexido - era a segunda razao
+            // de as configuracoes voltarem ao padrao.
+            //
+            // Com o modo estrito ligado a URL precisa ir: e ela que diz a
+            // biblioteca o que PODE existir, e sem ela o checkFiles apagaria o
+            // modpack inteiro.
+            url: options.verify ? options.url : null,
             authenticator: authenticator,
             timeout: 10000,
             path: base,
