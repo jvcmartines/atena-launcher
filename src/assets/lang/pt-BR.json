@@ -227,5 +227,8 @@
     "home.preparing": "Conferindo os seus arquivos…",
     "home.preparing_hint": "A primeira conferência de um modpack grande pode levar alguns minutos.",
     "home.sync_done": "Modpack em dia. {count} arquivo(s) baixado(s) — aperte Jogar quando quiser.",
-    "home.sync_partial": "{count} arquivo(s) não vieram. Aperte Atualizar de novo para tentar só eles."
+    "home.sync_partial": "{count} arquivo(s) não vieram. Aperte Atualizar de novo para tentar só eles.",
+    "home.pause": "Pausar",
+    "home.resume": "Continuar",
+    "home.paused": "Pausado — aperte Continuar quando quiser"
 }

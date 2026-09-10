@@ -895,3 +895,32 @@
 .muted {
     color: var(--color-faint);
 }
+
+/* ------------------------------------------------- pausar o download ---- */
+
+.pause-btn {
+    padding: 3px 12px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--color-dim);
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pause-btn:hover {
+    color: var(--gold);
+    border-color: var(--stroke-strong);
+}
+
+/* Pausado: o botão vira o convite para continuar. */
+.pause-btn.paused {
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-600));
+    border-color: transparent;
+}

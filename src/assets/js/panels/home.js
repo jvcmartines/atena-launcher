@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -700,12 +700,35 @@ class Home {
         let progressBar = document.querySelector('.progress-bar')
         let speedElement = document.querySelector('.download-speed')
         let etaElement = document.querySelector('.download-eta')
+        let pauseBTN = document.querySelector('.pause-btn')
 
         playInstanceBTN.style.display = 'none'
         infoBox.style.display = 'block'
         progressBar.style.display = ''
         progressBar.value = 0
         ipcRenderer.send('main-window-progress-load')
+
+        // Pausar é cooperativo: o download para entre um arquivo e outro, então
+        // nada fica pela metade e nada é rebaixado ao retomar.
+        let pausa = new Pausa()
+        this.pausaAtual = pausa
+
+        if (pauseBTN) {
+            pauseBTN.hidden = false
+            pauseBTN.textContent = lang.t('home.pause')
+            pauseBTN.onclick = () => {
+                let pausado = pausa.alternar()
+                pauseBTN.textContent = lang.t(pausado ? 'home.resume' : 'home.pause')
+                pauseBTN.classList.toggle('paused', pausado)
+
+                if (pausado) {
+                    infoText.innerHTML = lang.t('home.paused')
+                    if (speedElement) speedElement.textContent = ''
+                    if (etaElement) etaElement.textContent = ''
+                    ipcRenderer.send('main-window-progress-reset')
+                }
+            }
+        }
 
         // Antes de mexer nos arquivos, guarda uma cópia das pastas do jogador.
         // Na primeira instalação não há nada para guardar.
@@ -732,7 +755,11 @@ class Home {
             let resultado = await modpack.sync(base, instance, {
                 ignored: protegidos,
                 concorrencia: configClient?.launcher_config?.download_multi || 5,
+                pausa,
                 aoProgresso: dados => {
+                    // Pausado: a tela fica dizendo isso, não voltando a mostrar
+                    // o progresso do último arquivo que ainda estava terminando.
+                    if (pausa.ativa) return
                     // Redesenhar a cada arquivo (são milhares) e a cada pedaço
                     // baixado custa mais que o próprio trabalho. Dez vezes por
                     // segundo já é mais rápido do que o olho acompanha.
@@ -810,6 +837,13 @@ class Home {
             progressBar.value = 0
             if (speedElement) speedElement.textContent = ''
             if (etaElement) etaElement.textContent = ''
+            if (pauseBTN) {
+                pauseBTN.hidden = true
+                pauseBTN.classList.remove('paused')
+                pauseBTN.onclick = null
+            }
+            pausa.reiniciar()
+            this.pausaAtual = null
             ipcRenderer.send('main-window-progress-reset')
         }
     }

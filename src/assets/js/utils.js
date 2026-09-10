@@ -24,6 +24,7 @@ import news from './utils/news.js';
 import suporte from './utils/suporte.js';
 import presenca from './utils/presenca.js';
 import registro from './utils/registro.js';
+import Pausa from './utils/pausa.js';
 
 /**
  * Fundo de época.
@@ -309,5 +310,6 @@ export {
     news as news,
     suporte as suporte,
     presenca as presenca,
-    registro as registro
+    registro as registro,
+    Pausa as Pausa
 }

@@ -227,5 +227,8 @@
     "home.preparing": "Comprobando tus archivos…",
     "home.preparing_hint": "La primera comprobación de un modpack grande puede tardar unos minutos.",
     "home.sync_done": "Modpack al día. {count} archivo(s) descargado(s) — pulsa Jugar cuando quieras.",
-    "home.sync_partial": "{count} archivo(s) no llegaron. Pulsa Actualizar otra vez para reintentar solo esos."
+    "home.sync_partial": "{count} archivo(s) no llegaron. Pulsa Actualizar otra vez para reintentar solo esos.",
+    "home.pause": "Pausar",
+    "home.resume": "Continuar",
+    "home.paused": "En pausa — pulsa Continuar cuando quieras"
 }

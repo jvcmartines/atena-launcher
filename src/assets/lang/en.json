@@ -227,5 +227,8 @@
     "home.preparing": "Checking your files…",
     "home.preparing_hint": "The first check on a big modpack can take a few minutes.",
     "home.sync_done": "Modpack up to date. {count} file(s) downloaded — press Play when you are ready.",
-    "home.sync_partial": "{count} file(s) failed to download. Press Update again to retry just those."
+    "home.sync_partial": "{count} file(s) failed to download. Press Update again to retry just those.",
+    "home.pause": "Pause",
+    "home.resume": "Resume",
+    "home.paused": "Paused — press Resume to carry on"
 }

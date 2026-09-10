@@ -200,7 +200,7 @@ class Modpack {
      *
      * `aoProgresso({ fase, feitos, total, bytes, bytesTotais, arquivo })`
      */
-    async sync(basePath, instance, { ignored = [], concorrencia = 5, aoProgresso } = {}) {
+    async sync(basePath, instance, { ignored = [], concorrencia = 5, aoProgresso, pausa } = {}) {
         const pasta = this.dir(basePath, instance.name);
         const arquivos = await this.manifest(instance.url);
 
@@ -234,7 +234,10 @@ class Modpack {
                 // milhares de idas ao disco; sem as pausas ele segura a thread da
                 // interface do começo ao fim e o launcher parece travado — que foi
                 // exatamente o que aconteceu.
-                if (i % 200 === 0) await this.respirar();
+                if (i % 200 === 0) {
+                    await this.respirar();
+                    if (pausa) await pausa.esperar();
+                }
                 if (aoProgresso) aoProgresso({ fase: 'conferindo', feitos: i + 1, total: arquivos.length });
 
                 // O que o jogador protegeu não é tocado, nem para conferir.
@@ -286,6 +289,10 @@ class Modpack {
 
         const trabalhar = async () => {
             while (proximo < faltando.length) {
+                // Entre um arquivo e outro é onde parar não custa nada: nada
+                // pela metade em disco, nada baixado duas vezes.
+                if (pausa) await pausa.esperar();
+
                 const arquivo = faltando[proximo++];
                 try {
                     await this.baixarArquivo(pasta, arquivo, pedaco => {
