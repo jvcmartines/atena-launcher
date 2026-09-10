@@ -318,7 +318,8 @@ class Modpack {
             }
         };
 
-        await Promise.all(Array.from({ length: Math.max(1, concorrencia) }, trabalhar));
+        const emParalelo = Math.min(32, Math.max(1, Math.round(Number(concorrencia) || 5)));
+        await Promise.all(Array.from({ length: emParalelo }, trabalhar));
 
         this.writeHashCache(pasta, cacheNovo);
         return { baixados, mantidos, bytes, falhas };

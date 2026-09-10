@@ -754,7 +754,7 @@ class Home {
         try {
             let resultado = await modpack.sync(base, instance, {
                 ignored: protegidos,
-                concorrencia: configClient?.launcher_config?.download_multi || 5,
+                concorrencia: Number(configClient?.launcher_config?.download_multi) || 16,
                 pausa,
                 aoProgresso: dados => {
                     // Pausado: a tela fica dizendo isso, não voltando a mostrar

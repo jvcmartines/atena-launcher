@@ -155,6 +155,8 @@ class Launcher {
         console.log('Initializing Config Client...')
         let configClient = await this.db.readData('configClient')
 
+        if (configClient) await this.migrarDownloads(configClient)
+
         if (!configClient) {
             await this.db.createData('configClient', {
                 account_selected: null,
@@ -174,7 +176,7 @@ class Launcher {
                     }
                 },
                 launcher_config: {
-                    download_multi: 5,
+                    download_multi: 16,
                     lang: lang.defaultCode,
                     protected: [],
                     theme: 'auto',
@@ -183,6 +185,25 @@ class Launcher {
                 }
             })
         }
+    }
+
+    /**
+     * Quem instalou o launcher antes de hoje tem download_multi = 5 guardado —
+     * o padrão antigo, que ninguém escolheu. Com o servidor falando HTTP/2, 5
+     * deixa metade da velocidade na mesa.
+     *
+     * Corrigido uma vez só, e anotado: se a pessoa depois escolher 5 de
+     * propósito, a escolha dela fica de pé.
+     */
+    async migrarDownloads(configClient) {
+        if (configClient.launcher_config?.downloads_migrados) return
+        if (!configClient.launcher_config) return
+
+        if (Number(configClient.launcher_config.download_multi) === 5) {
+            configClient.launcher_config.download_multi = 16
+        }
+        configClient.launcher_config.downloads_migrados = true
+        await this.db.updateData('configClient', configClient)
     }
 
     createPanels(...panels) {

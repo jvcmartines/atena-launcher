@@ -383,21 +383,35 @@ class Settings {
     async launcher() {
         let configClient = await this.db.readData('configClient');
 
-        let maxDownloadFiles = configClient?.launcher_config?.download_multi || 5;
+        // 16 e nao 5: o servidor fala HTTP/2, entao dezenas de pedidos viajam
+        // numa conexao so. Medido no modpack do Atena, com arquivos pequenos,
+        // subir de 6 para 24 simultaneos dobrou a velocidade.
+        const DOWNLOADS_PADRAO = 16;
+
+        let maxDownloadFiles = Number(configClient?.launcher_config?.download_multi) || DOWNLOADS_PADRAO;
         let maxDownloadFilesInput = document.querySelector(".max-files");
         let maxDownloadFilesReset = document.querySelector(".max-files-reset");
+
+        maxDownloadFilesInput.min = 1;
+        maxDownloadFilesInput.max = 32;
         maxDownloadFilesInput.value = maxDownloadFiles;
 
         maxDownloadFilesInput.addEventListener("change", async () => {
+            // Guardado como numero e dentro de limites: o campo aceita
+            // qualquer coisa digitada, e la na frente isso vira quantos
+            // downloads acontecem ao mesmo tempo.
+            let valor = Math.min(32, Math.max(1, Math.round(Number(maxDownloadFilesInput.value) || DOWNLOADS_PADRAO)));
+            maxDownloadFilesInput.value = valor;
+
             let configClient = await this.db.readData('configClient')
-            configClient.launcher_config.download_multi = maxDownloadFilesInput.value;
+            configClient.launcher_config.download_multi = valor;
             await this.db.updateData('configClient', configClient);
         })
 
         maxDownloadFilesReset.addEventListener("click", async () => {
             let configClient = await this.db.readData('configClient')
-            maxDownloadFilesInput.value = 5
-            configClient.launcher_config.download_multi = 5;
+            maxDownloadFilesInput.value = DOWNLOADS_PADRAO
+            configClient.launcher_config.download_multi = DOWNLOADS_PADRAO;
             await this.db.updateData('configClient', configClient);
         })
 
