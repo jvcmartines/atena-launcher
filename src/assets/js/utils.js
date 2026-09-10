@@ -109,6 +109,11 @@ async function changePanel(id) {
     let active = document.querySelector(`.active`)
     if (active) active.classList.toggle("active");
     panel.classList.add("active");
+
+    // Os painéis são montados uma vez, na abertura. O que eles mostram muda
+    // depois disso — o estado do modpack, as contas — então quem precisa
+    // redesenhar ao ser aberto escuta este aviso.
+    document.dispatchEvent(new CustomEvent('atena:painel', { detail: id }));
 }
 
 async function appdata() {

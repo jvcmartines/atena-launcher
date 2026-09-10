@@ -1,0 +1,144 @@
+/**
+ * A aba do modpack.
+ *
+ * Mesma geometria das configurações — menu à esquerda, conteúdo à direita —
+ * porque para quem usa é a mesma coisa: uma página do launcher, não um balão
+ * pendurado num botão.
+ *
+ * Os cartões e a grade de ações reaproveitam as classes de home.css; aqui só
+ * mudam os tamanhos, que numa página podem ser maiores.
+ */
+
+.modpack-panel {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    gap: 22px;
+    height: 100%;
+    padding: 14px 34px 26px;
+}
+
+/* -------------------------------------------------------- menu lateral - */
+
+.nav-modpack {
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px;
+}
+
+.nav-modpack > p {
+    margin: 0 0 20px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+/* O resumo do pack escolhido. Ficava no topo do popup e repetia o cartão;
+   aqui ele tem lugar próprio e não disputa espaço com as ações. */
+.pack-side {
+    flex: 1;
+    padding: 0 10px;
+}
+
+.pack-side-name {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.25;
+    background: linear-gradient(180deg, var(--gold-100) 0%, var(--gold) 48%, var(--gold-600) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.pack-side-state {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--color-dim);
+}
+
+.pack-side-state.novo {
+    color: var(--gold);
+}
+
+.pack-side-version {
+    margin-top: 3px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-faint);
+}
+
+/* --------------------------------------------------------- conteúdo ---- */
+
+/* Superficie propria. A imagem de fundo do launcher e clara em boa parte do
+   dia, e os cartoes translucidos por cima dela ficavam ilegiveis — o texto
+   competia com folhas de arvore. */
+.modpack-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px;
+    background: rgba(9, 2, 5, 0.74);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    animation: settings-in 0.4s var(--ease);
+}
+
+/* Numa página os cartões podem ter o tamanho de um cartão. */
+.modpack-panel .instances-List {
+    grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.modpack-panel .instance-elements {
+    height: 116px;
+    padding: 12px;
+}
+
+.modpack-panel .instance-art.sem-foto {
+    font-size: 72px;
+    padding-right: 10px;
+}
+
+.modpack-panel .instance-name {
+    font-size: 14px;
+}
+
+.modpack-panel .instance-badge {
+    font-size: 10.5px;
+}
+
+/* E as ações deixam de viver espremidas em duas colunas fixas. */
+.modpack-panel .pack-actions {
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 10px;
+}
+
+.modpack-panel .pack-action {
+    padding: 14px 16px 15px;
+}
+
+.modpack-panel .pack-action strong {
+    font-size: 13.5px;
+}
+
+.modpack-panel .pack-action small {
+    font-size: 11.5px;
+}
+
+.modpack-panel .pack-icon {
+    width: 21px;
+    height: 21px;
+    margin-bottom: 9px;
+}
+
+/* -------------------------------------------------------- responsivo --- */
+
+@media (max-width: 1000px) {
+    .modpack-panel {
+        grid-template-columns: 190px minmax(0, 1fr);
+        padding: 6px 20px 20px;
+    }
+}

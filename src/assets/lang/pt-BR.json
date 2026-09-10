@@ -302,5 +302,9 @@
     "notify.launcher_title": "Launcher novo",
     "notify.launcher_text": "A v{version} está disponível. Ela se instala da próxima vez que você abrir o launcher.",
     "home.badge_update": "tem atualização",
-    "home.badge_ready": "instalado"
+    "home.badge_ready": "instalado",
+    "modpack.available": "Modpacks disponíveis",
+    "modpack.available_text": "Clique em um para jogar nele. O que aparece aqui depende dos seus cargos.",
+    "modpack.actions": "Ações",
+    "modpack.checking": "conferindo…"
 }

@@ -35,10 +35,8 @@ class Home {
         this.playersPopup()
         this.newsPopup()
         this.changelogPopup()
-        this.extrasPopup()
-        this.importPopup()
-        this.fpsPopup()
         this.interruptores()
+        this.ouvirAAba()
         this.mostrarHoras()
         this.vigia()
         this.contaBotao()
@@ -108,9 +106,6 @@ class Home {
 
         let playBTN = document.querySelector('.play-btn')
         let packMenuBTN = document.querySelector('.pack-menu-btn')
-        let instancePopup = document.querySelector('.instance-popup')
-        let instancesListPopup = document.querySelector('.instances-List')
-        let instanceCloseBTN = document.querySelector('.close-popup')
 
         // Sem nenhum modpack visivel nao ha o que jogar. Acontece quando a
         // staff restringe tudo por cargo, ou desativa o unico modpack.
@@ -152,79 +147,8 @@ class Home {
             }
         }
 
-        instancePopup.addEventListener('click', async e => {
-            let configClient = await this.db.readData('configClient')
-
-            // O cartao tem filhos (capa, nome, selo), entao o clique pode
-            // chegar em qualquer um deles.
-            let cartao = e.target.closest('.instance-elements')
-            if (cartao) {
-                let newInstanceSelect = cartao.id
-                let activeInstanceSelect = document.querySelector('.active-instance')
-
-                if (activeInstanceSelect) activeInstanceSelect.classList.remove('active-instance');
-                cartao.classList.add('active-instance');
-
-                configClient.instance_select = newInstanceSelect
-                await this.db.updateData('configClient', configClient)
-
-                let options = instancesList.find(i => i.name == newInstanceSelect)
-                instancePopup.style.display = 'none'
-                this.currentStatusInstance = options
-                await setStatus(options.status, options)
-                await this.refreshState(options)
-            }
-
-            let acao = e.target.closest('.pack-action')
-            if (acao) this.packAction(acao.dataset.action)
-        })
-
-        packMenuBTN.addEventListener('click', async () => {
-            let configClient = await this.db.readData('configClient')
-            let instanceSelect = configClient.instance_select
-            let auth = await this.db.readData('accounts', configClient.account_selected)
-
-            // Um cartao por modpack, com capa. A capa vem do servidor quando a
-            // staff publica uma; sem ela, a inicial do nome sobre o degrade da
-            // marca — melhor que um retangulo vazio, e nao inventa imagem.
-            let base = await this.basePath()
-            instancesListPopup.innerHTML = ''
-
-            for (let instance of instancesList) {
-                let visible = !instance.whitelistActive || instance.whitelist.includes(auth?.name)
-                if (!visible) continue
-
-                let active = instance.name == instanceSelect ? ' active-instance' : ''
-                let label = instance.displayName || instance.name
-                let arte = instance.image
-                    ? `<div class="instance-art" style="background-image:url('${this.escapar(instance.image)}')"></div>`
-                    : `<div class="instance-art sem-foto">${this.escapar(label.trim()[0] || '?')}</div>`
-
-                instancesListPopup.innerHTML += `
-                    <div id="${instance.name}" class="instance-elements${active}">
-                        ${arte}
-                        <span class="instance-name">${this.escapar(label)}</span>
-                        <span class="instance-badge" data-pack="${this.escapar(instance.name)}"></span>
-                    </div>`
-            }
-
-            // O estado de cada um entra depois: sao chamadas de rede, e a lista
-            // nao pode esperar por elas para aparecer.
-            for (let instance of instancesList) {
-                let selo = instancesListPopup.querySelector(`.instance-badge[data-pack="${instance.name}"]`)
-                if (!selo) continue
-
-                modpack.state(base, instance).then(estado => {
-                    selo.textContent = lang.t(
-                        estado === 'install' ? 'home.state_install'
-                            : estado === 'update' ? 'home.badge_update' : 'home.badge_ready'
-                    )
-                    selo.classList.toggle('novo', estado !== 'ready')
-                }).catch(() => { })
-            }
-
-            instancePopup.style.display = 'flex'
-        })
+        // O botao do modpack agora abre a aba, nao um popup.
+        packMenuBTN.addEventListener('click', () => changePanel('modpack'))
 
         // Baixar e jogar são dois passos separados de propósito: quem clicou em
         // Atualizar quer o modpack em dia, não o Minecraft abrindo na cara.
@@ -238,7 +162,6 @@ class Home {
                 ? this.updatePack()
                 : this.startGame()
         ))
-        instanceCloseBTN.addEventListener('click', () => instancePopup.style.display = 'none')
     }
 
     /**
@@ -521,68 +444,6 @@ class Home {
         }
     }
 
-    /* ------------------------------------------------- ações do modpack -- */
-
-    async packAction(action) {
-        let instance = await this.currentInstance()
-        if (!instance) return
-
-        let base = await this.basePath()
-
-        if (action === 'folder') {
-            let folder = modpack.dir(base, instance.name)
-            require('fs').mkdirSync(folder, { recursive: true })
-            shell.openPath(folder)
-            return
-        }
-
-        if (action === 'changelog') {
-            document.querySelector('.instance-popup').style.display = 'none'
-            await this.showChangelog(instance, null)
-            return
-        }
-
-        if (action === 'repair') return this.executar(() => this.repairPack(instance, base))
-        if (action === 'report') return this.reportProblem(instance, base)
-        if (action === 'fps') return this.showFps(instance, base)
-        if (action === 'extras') return this.showExtras(instance, base)
-        if (action === 'import') return this.showImport(instance, base)
-
-        if (action === 'reinstall') {
-            if (!confirm(lang.t('home.reinstall_confirm'))) return
-
-            let configClient = await this.db.readData('configClient')
-            let userProtected = configClient?.launcher_config?.protected || []
-
-            // Antes de apagar qualquer coisa, guarda uma cópia.
-            try {
-                await backup.run(base, instance.name, instance.backup || [])
-            } catch (err) {
-                console.error('[backup] falhou antes de reinstalar:', err)
-            }
-
-            // Mundos, prints e o que o jogador protegeu sobrevivem.
-            await modpack.reinstall(base, instance.name, [...(instance.ignored || []), ...userProtected])
-
-            document.querySelector('.instance-popup').style.display = 'none'
-            await this.refreshState(instance)
-
-            new popup().openPopup({
-                title: lang.t('home.pack_options'),
-                content: lang.t('home.reinstall_done'),
-                color: 'var(--gold)',
-                options: true
-            })
-        }
-    }
-
-    /**
-     * Verificar e reparar: confere o SHA-1 de cada arquivo contra o manifesto e
-     * apaga o que não bate, para o próximo Jogar baixar só isso de novo.
-     *
-     * Usa a mesma barra do download, porque conferir 5 mil arquivos leva o seu
-     * tempo e a pessoa precisa ver que está andando.
-     */
     async repairPack(instance, base) {
         document.querySelector('.instance-popup').style.display = 'none'
 
@@ -946,85 +807,94 @@ class Home {
         })
     }
 
-    /* ----------------------------------------------------- FPS Boost ----- */
+    /* ------------------------------------------ pedidos da aba do pack --- */
 
-    fpsPopup() {
-        let caixa = document.querySelector('.fps-popup')
-        if (!caixa) return
+    /**
+     * A aba do modpack pede, a tela inicial executa.
+     *
+     * Tudo o que precisa da barra de progresso mora aqui, porque a barra está
+     * aqui. Duplicar a barra na outra página daria duas barras que podem
+     * discordar uma da outra; mandar a pessoa de volta para esta tela é mais
+     * honesto — ela precisa VER o que pediu acontecendo.
+     */
+    ouvirAAba() {
+        document.addEventListener('atena:modpack', async e => {
+            let acao = e.detail?.acao
+            changePanel('home')
 
-        let fechar = () => caixa.style.display = 'none'
-        document.querySelector('.close-fps').addEventListener('click', fechar)
-        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
+            let instance = await this.currentInstance()
+            if (!instance) return
+            let base = await this.basePath()
+
+            if (acao === 'repair') return this.executar(() => this.repairPack(instance, base))
+            if (acao === 'report') return this.reportProblem(instance, base)
+            if (acao === 'reinstall') return this.executar(() => this.reinstalar(instance, base))
+            if (acao === 'changelog') return this.showChangelog(instance, null)
+            if (acao === 'import' && e.detail.pasta) {
+                return this.executar(() => this.importarDe(instance, base, e.detail.pasta))
+            }
+        })
+
+        // Trocou de pack, ligou o Essential, mexeu no FPS Boost: o botão e os
+        // interruptores desta tela falam de outro estado agora.
+        document.addEventListener('atena:trocou-pack', async () => {
+            let instance = await this.currentInstance()
+            if (!instance) return
+
+            this.currentStatusInstance = instance
+            await setStatus(instance.status, instance)
+            await this.refreshState(instance)
+            await this.interruptores()
+        })
     }
 
     /**
-     * Derruba as configurações gráficas do modpack para o mínimo.
+     * Apaga o modpack para ele ser baixado de novo do zero.
      *
-     * A tela mostra item por item o que vai mudar, com o valor de agora e o de
-     * depois. Um botão que mexe em quinze configurações do jogo sem dizer
-     * quais é um botão em que ninguém deveria confiar.
+     * Antes de apagar qualquer coisa, guarda uma cópia — é a única ação do
+     * launcher que destrói arquivo de propósito, e a rede de segurança é o que
+     * torna aceitável oferecê-la com um clique.
      */
-    async showFps(instance, base) {
-        document.querySelector('.instance-popup').style.display = 'none'
+    async reinstalar(instance, base) {
+        if (!confirm(lang.t('home.reinstall_confirm'))) return
 
-        let caixa = document.querySelector('.fps-popup')
-        let lista = document.querySelector('.fps-changes')
-        caixa.style.display = 'flex'
-        lista.innerHTML = ''
+        let configClient = await this.db.readData('configClient')
+        let userProtected = configClient?.launcher_config?.protected || []
 
-        await this.desenharFps(instance, base)
-    }
-
-    async desenharFps(instance, base) {
-        let pasta = modpack.dir(base, instance.name)
-        let estado = await desempenho.estado(pasta)
-
-        let texto = document.querySelector('.fps-state-text')
-        let botao = document.querySelector('.fps-toggle')
-        let lista = document.querySelector('.fps-changes')
-
-        if (!estado.possivel) {
-            // Antes da primeira partida o Minecraft ainda não escreveu nada.
-            texto.textContent = lang.t('fps.not_yet')
-            botao.hidden = true
-            lista.innerHTML = ''
-            return
-        }
-
-        botao.hidden = false
-        texto.innerHTML = lang.t(estado.ligado ? 'fps.on' : 'fps.off')
-        botao.textContent = lang.t(estado.ligado ? 'fps.turn_off' : 'fps.turn_on')
-        botao.classList.toggle('on', estado.ligado)
-
-        lista.innerHTML = estado.mudancas.map(m => `
-            <div class="fps-row${m.aplicado ? ' done' : ''}">
-                <span class="fps-label">${lang.t(m.rotulo)}</span>
-                <span class="fps-values">${this.escapar(m.atual)} <i>→</i> ${this.escapar(m.alvo)}</span>
-            </div>`).join('')
-
-        botao.onclick = () => this.alternarFps(instance, base, estado.ligado)
-    }
-
-    async alternarFps(instance, base, estavaLigado) {
-        let botao = document.querySelector('.fps-toggle')
-        botao.disabled = true
+        let infoText = document.querySelector('.info-starting-game-text')
+        let progressBar = document.querySelector('.progress-bar')
+        await this.entrarEmProgresso()
 
         try {
-            let pasta = modpack.dir(base, instance.name)
-            if (estavaLigado) await desempenho.desligar(pasta)
-            else await desempenho.ligar(pasta)
-        } catch (err) {
-            console.error('[fps] falhou:', err)
-            new popup().openPopup({
-                title: lang.t('fps.title'),
-                content: lang.t('fps.failed'),
-                color: 'red',
-                options: true
-            })
+            infoText.innerHTML = lang.t('home.backup')
+            try {
+                await backup.run(base, instance.name, instance.backup || [], (feitos, total) => {
+                    let agora = Date.now()
+                    if (feitos !== total && agora - (this.ultimoDesenho || 0) < 120) return
+                    this.ultimoDesenho = agora
+                    infoText.innerHTML = lang.t('home.backup_progress', {
+                        percent: ((feitos / Math.max(1, total)) * 100).toFixed(0)
+                    })
+                    progressBar.value = feitos
+                    progressBar.max = total
+                })
+            } catch (err) {
+                console.error('[backup] falhou antes de reinstalar:', err)
+            }
+
+            // Mundos, prints e o que o jogador protegeu sobrevivem.
+            await modpack.reinstall(base, instance.name, [...(instance.ignored || []), ...userProtected])
+            await this.refreshState(instance)
         } finally {
-            botao.disabled = false
-            await this.desenharFps(instance, base)
+            this.sairDoProgresso()
         }
+
+        new popup().openPopup({
+            title: lang.t('home.pack_options'),
+            content: lang.t('home.reinstall_done'),
+            color: 'var(--gold)',
+            options: true
+        })
     }
 
     /* --------------------------------------------- a saída do botão ------ */
@@ -1047,198 +917,7 @@ class Home {
         }, 260))
     }
 
-    /* ---------------------------------------------- mods opcionais ------ */
-
-    extrasPopup() {
-        let caixa = document.querySelector('.extras-popup')
-        if (!caixa) return
-
-        let fechar = () => caixa.style.display = 'none'
-        document.querySelector('.close-extras').addEventListener('click', fechar)
-        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
-    }
-
-    /**
-     * Lista os mods que a pessoa pode ligar e desligar por conta própria.
-     *
-     * O Essential já vem dentro do modpack do Atena, então aqui ele aparece
-     * como uma chave: ligado por padrão, e desligável. Desligar na mão não
-     * funcionaria — o arquivo está no manifesto, e o próximo Jogar o traria de
-     * volta. É exatamente por isso que isto precisa existir no launcher.
-     */
-    async showExtras(instance, base) {
-        document.querySelector('.instance-popup').style.display = 'none'
-
-        let caixa = document.querySelector('.extras-popup')
-        let lista = document.querySelector('.extras-list')
-        caixa.style.display = 'flex'
-        lista.innerHTML = `<div class="players-empty">${lang.t('extras.loading')}</div>`
-
-        let arquivos = await modpack.manifest(instance.url)
-        let itens = await extras.estado(base, instance, arquivos)
-
-        if (!itens.length) {
-            lista.innerHTML = `<div class="players-empty">${lang.t('extras.none')}</div>`
-            return
-        }
-
-        lista.innerHTML = itens.map(item => `
-            <div class="extra-item" data-id="${item.id}">
-                <div class="extra-info">
-                    <strong>${this.escapar(item.nome)}</strong>
-                    <small>${lang.t(`extras.about_${item.id}`)}</small>
-                    <span class="extra-meta"></span>
-                </div>
-                <button class="extra-toggle"></button>
-            </div>`).join('')
-
-        for (let item of itens) {
-            let linha = lista.querySelector(`.extra-item[data-id="${item.id}"]`)
-            this.desenharExtra(linha, item)
-
-            linha.querySelector('.extra-toggle').addEventListener('click', () => {
-                this.alternarExtra(instance, base, item, linha)
-            })
-
-            // A versão publicada vem da internet; só interessa para quem ainda
-            // não tem o arquivo. Chegando ou não, o botão já funciona.
-            if (item.ausente && item.disponivel) {
-                extras.versaoRemota(item.id, item.plataforma).then(versao => {
-                    if (!versao) return
-                    item.versaoRemota = versao
-                    this.desenharExtra(linha, item)
-                })
-            }
-        }
-    }
-
-    /** Texto e botão de uma linha, a partir do estado atual do mod. */
-    desenharExtra(linha, item) {
-        if (!linha) return
-
-        let meta = linha.querySelector('.extra-meta')
-        let botao = linha.querySelector('.extra-toggle')
-
-        if (!item.disponivel) {
-            meta.textContent = lang.t('extras.unsupported')
-            botao.textContent = lang.t('extras.turn_on')
-            botao.disabled = true
-            return
-        }
-
-        botao.disabled = false
-        linha.classList.toggle('installed', item.ligado)
-
-        let detalhes = [
-            lang.t(item.ligado ? 'extras.on' : item.ausente ? 'extras.absent' : 'extras.off'),
-            // Um mod do pack não tem "versão" própria: ele acompanha o modpack.
-            item.modo === 'pack' ? lang.t('extras.from_pack') : (item.versao || item.versaoRemota ? `v${item.versao || item.versaoRemota}` : null),
-            item.tamanho ? this.tamanhoCurto(item.tamanho) : null
-        ]
-
-        meta.textContent = detalhes.filter(Boolean).join(' · ')
-        botao.textContent = lang.t(item.ligado ? 'extras.turn_off' : item.ausente ? 'extras.install' : 'extras.turn_on')
-    }
-
-    /** Liga ou desliga o mod, com a porcentagem no próprio botão se precisar baixar. */
-    async alternarExtra(instance, base, item, linha) {
-        let botao = linha.querySelector('.extra-toggle')
-        botao.disabled = true
-
-        try {
-            let feito = await extras.alternar(base, instance, item.id, !item.ligado, ({ bytes, bytesTotais }) => {
-                // 50 MB: repintar a cada pedaço custaria mais que o download.
-                let agora = Date.now()
-                if (agora - (this.ultimoExtra || 0) < 120) return
-                this.ultimoExtra = agora
-                botao.textContent = bytesTotais
-                    ? `${((bytes / bytesTotais) * 100).toFixed(0)}%`
-                    : this.tamanhoCurto(bytes)
-            })
-
-            item.ligado = feito.acao !== 'desligado'
-            if (feito.bytes) { item.tamanho = feito.bytes; item.ausente = false }
-        } catch (err) {
-            console.error('[extras] falhou:', err)
-            let motivo = {
-                'sem-versao': 'extras.no_build',
-                'sem-plataforma': 'extras.no_build',
-                checksum: 'extras.checksum'
-            }[err.message]
-
-            new popup().openPopup({
-                title: lang.t('extras.title'),
-                content: motivo ? lang.t(motivo, { name: item.nome }) : lang.t('extras.failed', { name: item.nome }),
-                color: 'red',
-                options: true
-            })
-        } finally {
-            botao.disabled = false
-            this.desenharExtra(linha, item)
-        }
-    }
-
     /* ------------------------------------ importar um modpack do disco --- */
-
-    importPopup() {
-        let caixa = document.querySelector('.import-popup')
-        if (!caixa) return
-
-        let fechar = () => caixa.style.display = 'none'
-        document.querySelector('.close-import').addEventListener('click', fechar)
-        caixa.addEventListener('click', e => { if (e.target === caixa) fechar() })
-
-        document.querySelector('.import-browse').addEventListener('click', async () => {
-            let escolhida = await ipcRenderer.invoke('choose-folder', lang.t('import.title'))
-            if (!escolhida) return
-
-            let instance = await this.currentInstance()
-            if (!instance) return
-
-            fechar()
-            let base = await this.basePath()
-            this.executar(() => this.importarDe(instance, base, escolhida))
-        })
-    }
-
-    /**
-     * Mostra as instalações que existem no computador.
-     *
-     * A varredura olha os lugares onde os launchers costumam guardar as
-     * coisas. Não achar nada não é impedimento: o botão de escolher a pasta
-     * na mão cobre quem instalou em outro lugar.
-     */
-    async showImport(instance, base) {
-        document.querySelector('.instance-popup').style.display = 'none'
-
-        let caixa = document.querySelector('.import-popup')
-        let lista = document.querySelector('.import-list')
-        caixa.style.display = 'flex'
-        lista.innerHTML = `<div class="players-empty">${lang.t('import.searching')}</div>`
-
-        let achados = await importar.candidatos(await appdata(), modpack.dir(base, instance.name))
-
-        if (!achados.length) {
-            lista.innerHTML = `<div class="players-empty">${lang.t('import.nothing')}</div>`
-            return
-        }
-
-        lista.innerHTML = achados.map((achado, i) => `
-            <div class="import-item" data-i="${i}">
-                <strong>${this.escapar(achado.rotulo)}</strong>
-                <span class="import-meta">${lang.t('import.found', {
-                    mods: achado.mods, size: this.tamanhoCurto(achado.bytes)
-                })}</span>
-                <span class="import-path">${this.escapar(achado.caminho)}</span>
-            </div>`).join('')
-
-        lista.querySelectorAll('.import-item').forEach(linha => {
-            linha.addEventListener('click', () => {
-                caixa.style.display = 'none'
-                this.executar(() => this.importarDe(instance, base, achados[Number(linha.dataset.i)].caminho))
-            })
-        })
-    }
 
     /**
      * Copia da pasta escolhida tudo o que bater com o manifesto.
@@ -1333,36 +1012,6 @@ class Home {
         } finally {
             soltarControles()
             this.sairDoProgresso()
-        }
-    }
-
-    /** "1,6 GB" a partir de bytes. */
-    tamanhoCurto(bytes) {
-        let n = Number(bytes) || 0
-        if (n >= 1073741824) return `${(n / 1073741824).toFixed(1)} GB`
-        if (n >= 1048576) return `${Math.round(n / 1048576)} MB`
-        return `${Math.max(1, Math.round(n / 1024))} KB`
-    }
-
-    /**
-     * Roda uma tarefa longa, e só uma por vez.
-     *
-     * O botão volta a aparecer assim que um download é cancelado, e clicar de
-     * novo começava um segundo download por cima do primeiro — dois conjuntos
-     * de trabalhadores gravando na mesma pasta. A trava é marcada antes de
-     * qualquer `await`, senão dois cliques rápidos passariam os dois.
-     */
-    async executar(tarefa) {
-        if (this.ocupado) return
-        this.ocupado = true
-
-        try {
-            await tarefa()
-        } catch (err) {
-            // Desistir não é falha: quem apertou cancelar já sabe o que houve.
-            if (!err?.cancelado) this.falhouAoIniciar(err)
-        } finally {
-            this.ocupado = false
         }
     }
 
