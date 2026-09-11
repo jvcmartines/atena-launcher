@@ -2,135 +2,173 @@
 
 <img src="src/assets/images/atena-logo.png" width="360" alt="Atena Launcher">
 
-O launcher oficial do **Atena**, um servidor de Minecraft com modpack próprio.
+The official launcher for **Atena**, a Minecraft server with its own modpack.
 
 [![Downloads](https://img.shields.io/github/downloads/jvcmartines/atena-launcher/total?label=downloads&color=e8c26a&style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases)
-[![Versão](https://img.shields.io/github/v/release/jvcmartines/atena-launcher?label=vers%C3%A3o&color=7c5cff&style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
-[![Plataformas](https://img.shields.io/badge/windows%20%7C%20macos%20%7C%20linux-2b2b2b?style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
+[![Version](https://img.shields.io/github/v/release/jvcmartines/atena-launcher?label=version&color=7c5cff&style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
+[![Platforms](https://img.shields.io/badge/windows%20%7C%20macos%20%7C%20linux-2b2b2b?style=for-the-badge)](https://github.com/jvcmartines/atena-launcher/releases/latest)
 [![Minecraft](https://img.shields.io/badge/forge%201.20.1-3ecf8e?style=for-the-badge)](https://atenasmp.com)
 [![Discord](https://img.shields.io/discord/1410636816024998059?label=discord&logo=discord&logoColor=white&color=5865F2&style=for-the-badge)](https://discord.gg/92cDk8rZKK)
 
-[Site](https://atenasmp.com) · [Wiki](https://wiki.atenasmp.com) · [Discord](https://discord.gg/92cDk8rZKK)
+[Website](https://atenasmp.com) · [Wiki](https://wiki.atenasmp.com) · [Discord](https://discord.gg/92cDk8rZKK)
 
-[![Entrar no Discord do Atena](https://discord.com/api/guilds/1410636816024998059/widget.png?style=banner2)](https://discord.gg/92cDk8rZKK)
+[![Join the Atena Discord](https://discord.com/api/guilds/1410636816024998059/widget.png?style=banner2)](https://discord.gg/92cDk8rZKK)
 
 </div>
 
 ---
 
-## O que é
+## What it is
 
-Um clique para jogar no Atena. O launcher instala o modpack, mantém ele igual ao
-do servidor, baixa a versão certa do Java e abre o jogo.
+One click to play on Atena. The launcher installs the modpack, keeps it in sync
+with the server, downloads the right Java version and starts the game.
 
-O jogador não precisa ter Java instalado, não precisa saber o que é uma pasta
-`mods`, e não precisa baixar zip nenhum a cada atualização.
+Players don't need Java installed, don't need to know what a `mods` folder is,
+and don't need to download a zip every time the pack changes.
 
-Do outro lado tem um **painel web** onde a staff publica uma versão nova do
-modpack arrastando um `.zip` — sem tocar em arquivo no servidor, sem SSH.
-
----
-
-## Recursos
-
-### Jogar
-
-- **Instalar, atualizar ou jogar.** O botão se nomeia sozinho conforme o que
-  falta na máquina. O jogador não escolhe entre instalar e atualizar — o
-  launcher já sabe qual é o caso.
-- **Atualização só do que mudou.** Cada arquivo é conferido pelo SHA-1 contra o
-  manifesto publicado. Trocar um mod de 2 MB baixa 2 MB, não o pack inteiro.
-- **Java automático.** A versão certa é baixada e usada sozinha; nada de
-  instalar Java na mão nem descobrir por que a arquitetura está errada.
-- **Backup antes de cada atualização.** As pastas do jogador são copiadas para
-  `backups/`, mantendo as 5 mais recentes.
-- **Pastas protegidas.** O jogador lista o que o launcher não pode sobrescrever
-   — inclusive subpastas, como `config/create`.
-- **Reinstalar sem perder nada.** Apaga mods e configs e baixa de novo; mundos,
-  prints e teclas continuam onde estavam.
-- **RAM calibrada para o pack.** Padrão de 4/8 GB, teto de 24 GB, sempre
-  deixando 2 GB para o sistema.
-
-### Comunidade
-
-- **Trocar a skin no launcher.** Prévia do boneco, modelo clássico ou fino, e um
-  PNG. Fala direto com a Mojang, então a skin muda em todo lugar.
-- **Quem está jogando.** Lista de quem está no servidor agora, com a cabeça de
-  cada um, direto da tela inicial.
-- **Status do servidor.** No ar ou não, ping e vagas ocupadas.
-- **IP com um clique** para copiar.
-- **Três idiomas:** inglês (padrão), português e espanhol, trocáveis pelo
-  jogador.
-
-### Para a staff
-
-- **Publicar por `.zip`.** Arrasta o pack no painel, clica em publicar, e os
-  jogadores recebem na próxima abertura.
-- **Verificação por Discord.** O jogador conecta a conta e a staff passa a saber
-  qual nick de Minecraft é de quem.
-- **Modpacks fechados por cargo.** Uma versão de testes que só a staff enxerga —
-  o filtro roda no servidor, então não há como contornar.
-- **Banir do launcher**, com o motivo aparecendo para a pessoa.
-- **Notícias e modo manutenção**, sem reiniciar nada.
+On the other side there's a **web panel** where staff publish a new modpack
+version by dragging in a `.zip` — no touching files on the server, no SSH.
 
 ---
 
-## Rodando
+## Features
 
-**Jogadores** baixam o instalador na
-[última release](https://github.com/jvcmartines/atena-launcher/releases/latest).
+### Playing
 
-**Para mexer no código:**
+- **Install, Update or Play.** The button names itself after whatever is
+  missing on the machine. Players never choose between installing and
+  updating — the launcher already knows which one it is.
+- **The whole modpack in one download.** A published version is packed into a
+  single archive hosted on a CDN, and the launcher unpacks it while it
+  downloads. Measured on the same machine, in the same minute: 2.9 MB/s from
+  our server against 26.9 MB/s from the CDN. A fresh install went from about
+  eight minutes to a little over one.
+- **Updates carry only what changed.** A "delta" package holds just the files
+  that differ from the previous version, so swapping one mod downloads one mod.
+  When there's no package to use, the launcher falls back to checking every
+  file's SHA-1 against the published manifest and fetching the difference.
+- **Your settings survive updates.** When the server publishes the same hash it
+  published last time, the file didn't change on their side — so whoever
+  changed it was you, and it stays. When the published hash *does* change, the
+  update wins. That's what "updating the modpack" means.
+- **Pause and cancel.** A download stops between files, so nothing is left half
+  written and nothing already fetched is thrown away.
+- **Import a copy you already have.** Already have this modpack from another
+  launcher? The launcher copies from there instead of downloading again — and
+  only accepts a file whose SHA-1 matches exactly what was published, so a
+  tampered or mismatched mod never gets through.
+- **Automatic Java.** The right version is downloaded and used on its own. No
+  installing Java by hand, no wondering why the architecture is wrong.
+- **Backup before every update.** The player's folders are copied into
+  `backups/`, keeping the 5 most recent.
+- **Protected folders.** Players list what the launcher must not overwrite —
+  subfolders included, like `config/create`.
+- **Reinstall without losing anything.** Wipes mods and configs and downloads
+  them again; worlds, screenshots and key bindings stay where they were.
+- **RAM tuned for the pack.** Defaults to 4/8 GB, caps at 24 GB, and always
+  leaves 2 GB for the operating system.
+
+### On the home screen
+
+- **Join the server automatically**, skipping the multiplayer menu.
+- **FPS Boost.** Drops fifteen graphics settings to the minimum for weaker
+  machines — chosen by looking at what the pack actually uses. It lists every
+  change with its current and new value, keeps the originals, and undoes them
+  with one click.
+- **Optional mods.** Turn Essential and friends on or off. Turning one off by
+  hand doesn't work — the file is in the manifest, so the next launch would
+  bring it back.
+- **Hours played**, pulled from the server's own world files, next to your nick.
+- **The latest staff notice**, right on the home screen.
+- **A Windows notification** when a new modpack or launcher version comes out,
+  and the Play button switches to Update on its own — no restarting anything.
+
+### Community
+
+- **Change your skin from the launcher.** Model preview, classic or slim, and a
+  PNG. It talks to Mojang directly, so the skin changes everywhere.
+- **Who's playing.** The list of people on the server right now, each with
+  their head, straight from the home screen.
+- **Server status.** Up or down, ping and slots in use.
+- **One-click IP** to copy.
+- **Three languages:** English (default), Portuguese and Spanish, switchable by
+  the player.
+
+### For staff
+
+- **Publish a `.zip`.** Drag the pack into the panel, hit publish, and players
+  get it the next time they open the launcher.
+- **Discord verification.** Players connect their account, and staff can see
+  which Minecraft nick belongs to whom.
+- **Role-gated modpacks.** A test version only staff can see — the filter runs
+  on the server, so there's no way around it.
+- **Ban from the launcher**, with the reason shown to the person.
+- **News and maintenance mode**, without restarting anything.
+
+---
+
+## Running it
+
+**Players** download the installer from the
+[latest release](https://github.com/jvcmartines/atena-launcher/releases/latest).
+
+**To work on the code:**
 
 ```bash
 npm install
 npm run dev
 ```
 
-**Para subir o servidor e o painel:**
+**To bring up the server and the panel:**
 
 ```bash
 cd server
 npm install
-cp .env.example .env    # ajuste ATENA_PUBLIC_URL
+cp .env.example .env    # set ATENA_PUBLIC_URL
 npm start
 ```
 
-O passo a passo completo — VPS, nginx, HTTPS, publicar o modpack, gerar o
-instalador — está no **[manual](docs/MANUAL.md)**.
+The full walkthrough — VPS, nginx, HTTPS, publishing the modpack, building the
+installer — is in the **[manual](docs/MANUAL.md)**.
 
 ---
 
-## Como é feito
+## How it's built
 
-São duas partes que conversam por HTTP:
+Two halves that talk over HTTP:
 
 | | |
 |---|---|
-| `src/` | O launcher. Electron + [minecraft-java-core](https://github.com/luuxis/minecraft-java-core). |
-| `server/` | A API e o painel. Node + Express, sem banco de dados — os dados vivem em JSON e os arquivos do modpack em disco. |
+| `src/` | The launcher. Electron + [minecraft-java-core](https://github.com/luuxis/minecraft-java-core). |
+| `server/` | The API and the panel. Node + Express, no database — data lives in JSON and the modpack files on disk. |
 
-O servidor publica um **manifesto**: a lista de arquivos do modpack com tamanho
-e SHA-1. O launcher compara com o que tem na máquina e baixa a diferença. É esse
-manifesto que faz a atualização ser incremental e o modo estrito ser possível.
+The server publishes a **manifest**: the list of modpack files with their size
+and SHA-1. The launcher compares it against what's on the machine and fetches
+the difference. That manifest is what makes incremental updates possible, what
+lets strict mode exist, and what the packaged download is checked against
+afterwards — the package is a shortcut, never an authority.
+
+Two small checkers run before every build (`npm run conferir`): one finds
+variables used but never declared, the other finds calls to `this.something()`
+that no longer exist. Both exist because a refactor once shipped a perfectly
+valid file with a dead button in it.
 
 ---
 
-## Licença e créditos
+## License and credits
 
-Fork do **[Selvania-Launcher](https://github.com/luuxis/Selvania-Launcher)** de
-**[Luuxis](https://github.com/luuxis)**, sob a **Luuxis License v1.0**
-([`LICENSE.md`](LICENSE.md)). O histórico completo do projeto original está
-preservado neste repositório, desde o primeiro commit dele em 2021.
+A fork of **[Selvania-Launcher](https://github.com/luuxis/Selvania-Launcher)**
+by **[Luuxis](https://github.com/luuxis)**, under the **Luuxis License v1.0**
+([`LICENSE.md`](LICENSE.md)). The original project's full history is preserved
+in this repository, going back to its first commit in 2021.
 
-Três condições da licença que valem destacar:
+Three conditions from the license worth calling out:
 
-1. **O código-fonte precisa continuar público.** Mantenha este repositório
-   público.
-2. **O nome do autor original (Luuxis) precisa ser mencionado.** Está aqui, nos
-   cabeçalhos dos arquivos e no histórico do git.
-3. **Vender o código é proibido.** Monetizar o servidor com microtransações no
-   jogo é permitido.
+1. **The source has to stay public.** Keep this repository public.
+2. **The original author (Luuxis) has to be credited.** He is — here, in the
+   file headers, and in the git history.
+3. **Selling the code is forbidden.** Monetising the server with in-game
+   microtransactions is allowed.
 
-A documentação original do projeto (francês e inglês) está em `docs/`, e
-descreve o backend antigo em PHP — que **não** é o que este fork usa.
+The original project's documentation (French and English) is in `docs/`, and
+describes the old PHP backend — which is **not** what this fork uses.
