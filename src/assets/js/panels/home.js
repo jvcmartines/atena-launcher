@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho, pacote } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho, pacote, preferencias } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -1379,6 +1379,15 @@ class Home {
                 }
             })
 
+            // O modpack acabou de chegar (ou de mudar), entao os arquivos dos
+            // mods sao os de fabrica. As escolhas da pessoa entram agora, e nao
+            // so na proxima partida.
+            try {
+                await preferencias.aplicar(modpack.dir(base, instance.name), configClient?.setup?.escolhas)
+            } catch (err) {
+                console.error('[ajustes] nao consegui aplicar depois da sincronizacao:', err.message)
+            }
+
             // Só agora o modpack está em dia: anota a versão.
             let remote = await modpack.remoteVersion(instance.url)
             if (remote) {
@@ -1584,13 +1593,20 @@ class Home {
             progressBar.removeAttribute('value')   // barra indeterminada: está andando, só não dá para medir
         }
 
-        // O FPS Boost mexe em dois arquivos que vem do modpack, entao uma
-        // atualizacao os devolve ao padrao. Reaplicar aqui e o que impede o
-        // ajuste de sumir sozinho, sem a pessoa entender por que.
+        // O FPS Boost e os ajustes dos mods mexem em arquivos que vem do
+        // modpack, entao uma atualizacao os devolve ao padrao. Reaplicar aqui e
+        // o que impede os dois de sumirem sozinhos, sem a pessoa entender por
+        // que.
         try {
             await desempenho.reaplicar(modpack.dir(base, options.name))
         } catch (err) {
             console.error('[fps] nao consegui reaplicar:', err.message)
+        }
+
+        try {
+            await preferencias.aplicar(modpack.dir(base, options.name), configClient?.setup?.escolhas)
+        } catch (err) {
+            console.error('[ajustes] nao consegui reaplicar:', err.message)
         }
 
         launch.Launch(opt);

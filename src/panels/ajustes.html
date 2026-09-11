@@ -1,0 +1,104 @@
+<div class="ajustes-panel">
+
+    <nav class="nav-ajustes glass">
+        <p data-i18n="ajustes.title"></p>
+
+        <div class="ajustes-side">
+            <div class="ajustes-side-text" data-i18n="ajustes.side"></div>
+        </div>
+
+        <div class="ajustes-voltar nav-back" data-i18n="settings.back"></div>
+    </nav>
+
+    <div class="ajustes-body content-scroll">
+
+        <!-- So na primeira vez: explica por que esta tela apareceu sozinha. -->
+        <div class="ajustes-boasvindas" hidden>
+            <div class="ajustes-boasvindas-titulo" data-i18n="ajustes.welcome_title"></div>
+            <div class="ajustes-boasvindas-texto" data-i18n="ajustes.welcome_text"></div>
+        </div>
+
+        <!-- Sem o modpack instalado nao ha arquivo onde gravar. -->
+        <div class="ajustes-sem-pack" hidden data-i18n="ajustes.no_pack"></div>
+
+        <!-- ------------------------------------------------------ idiomas -->
+        <div class="titre-tab" data-i18n="ajustes.languages"></div>
+        <p class="tab-sub" data-i18n="ajustes.languages_text"></p>
+
+        <div class="ajustes-grade">
+            <label class="campo">
+                <span class="campo-nome" data-i18n="ajustes.i_speak"></span>
+                <span class="campo-dica" data-i18n="ajustes.i_speak_help"></span>
+                <select class="campo-select" id="ajuste-falo"></select>
+            </label>
+
+            <label class="campo">
+                <span class="campo-nome" data-i18n="ajustes.bubbles_in"></span>
+                <span class="campo-dica" data-i18n="ajustes.bubbles_in_help"></span>
+                <select class="campo-select" id="ajuste-baloes"></select>
+            </label>
+        </div>
+
+        <label class="toggle ajustes-toggle">
+            <input type="checkbox" class="toggle-input" id="ajuste-mostrar">
+            <span class="toggle-switch"></span>
+            <span class="toggle-text" data-i18n="ajustes.show_bubbles"></span>
+        </label>
+
+        <!-- --------------------------------------------------------- voz -->
+        <div class="titre-tab" data-i18n="ajustes.voice"></div>
+        <p class="tab-sub" data-i18n="ajustes.voice_text"></p>
+
+        <div class="ajustes-motores">
+            <div class="motor" data-motor="web_speech">
+                <strong data-i18n="ajustes.engine_web"></strong>
+                <small data-i18n="ajustes.engine_web_text"></small>
+            </div>
+            <div class="motor" data-motor="azure_server">
+                <strong data-i18n="ajustes.engine_azure"></strong>
+                <small data-i18n="ajustes.engine_azure_text"></small>
+            </div>
+        </div>
+
+        <label class="campo">
+            <span class="campo-nome" data-i18n="ajustes.microphone"></span>
+            <span class="campo-dica" data-i18n="ajustes.microphone_help"></span>
+            <select class="campo-select" id="ajuste-microfone"></select>
+        </label>
+
+        <!-- ------------------------------------------------------- cores -->
+        <div class="titre-tab" data-i18n="ajustes.colors"></div>
+        <p class="tab-sub" data-i18n="ajustes.colors_text"></p>
+
+        <div class="ajustes-cores">
+            <div class="cores-campos">
+                <label class="cor">
+                    <input type="color" id="ajuste-cor-fundo">
+                    <span data-i18n="ajustes.color_bg"></span>
+                </label>
+                <label class="cor">
+                    <input type="color" id="ajuste-cor-texto">
+                    <span data-i18n="ajustes.color_text"></span>
+                </label>
+                <label class="cor">
+                    <input type="color" id="ajuste-cor-destaque">
+                    <span data-i18n="ajustes.color_accent"></span>
+                </label>
+                <div class="cores-padrao size-btn" data-i18n="ajustes.color_reset"></div>
+            </div>
+
+            <!-- O balao de verdade, do jeito que vai aparecer no jogo. -->
+            <div class="balao-previa">
+                <div class="balao">
+                    <div class="balao-nome"></div>
+                    <div class="balao-texto" data-i18n="ajustes.preview_text"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ajustes-fim">
+            <button class="ajustes-salvar" data-i18n="ajustes.save"></button>
+            <span class="ajustes-status"></span>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,352 @@
+/**
+ * A tela de ajustes dos mods.
+ *
+ * Mesma casca das configurações e da aba do modpack — menu à esquerda,
+ * conteúdo com superfície própria à direita — porque para quem usa é a mesma
+ * coisa: uma página do launcher.
+ */
+
+.ajustes-panel {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    gap: 22px;
+    height: 100%;
+    padding: 14px 34px 26px;
+}
+
+/* -------------------------------------------------------- menu lateral - */
+
+.nav-ajustes {
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px;
+}
+
+.nav-ajustes > p {
+    margin: 0 0 16px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.ajustes-side {
+    flex: 1;
+    padding: 0 10px;
+}
+
+.ajustes-side-text {
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--color-dim);
+}
+
+/* ------------------------------------------------------------ conteúdo -- */
+
+.ajustes-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px;
+    background: rgba(9, 2, 5, 0.74);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    animation: settings-in 0.4s var(--ease);
+}
+
+/* Só na primeira vez: sem isto a tela aparecendo sozinha seria um susto. */
+.ajustes-boasvindas {
+    padding: 16px 18px;
+    margin-bottom: 22px;
+    background: linear-gradient(140deg, rgba(242, 199, 92, 0.14), var(--background-element));
+    border: 1px solid var(--stroke-strong);
+    border-radius: 14px;
+}
+
+.ajustes-boasvindas[hidden] {
+    display: none;
+}
+
+.ajustes-boasvindas-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold);
+}
+
+.ajustes-boasvindas-texto {
+    margin-top: 5px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--color-dim);
+}
+
+/* O modpack ainda não está em disco: dá para escolher, não dá para gravar. */
+.ajustes-sem-pack {
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--warning);
+    background: rgba(255, 183, 77, 0.1);
+    border: 1px solid rgba(255, 183, 77, 0.3);
+    border-radius: 12px;
+}
+
+.ajustes-sem-pack[hidden] {
+    display: none;
+}
+
+/* ------------------------------------------------------------- campos -- */
+
+.ajustes-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+}
+
+.campo {
+    display: block;
+    padding: 14px 16px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+}
+
+.campo-nome {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.campo-dica {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-dim);
+}
+
+.campo-select {
+    width: 100%;
+    margin-top: 11px;
+    padding: 9px 11px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--color);
+    background: var(--wine-800);
+    border: 1px solid var(--stroke);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.campo-select:hover,
+.campo-select:focus {
+    border-color: var(--stroke-strong);
+    outline: none;
+}
+
+.ajustes-toggle {
+    margin-top: 14px;
+}
+
+/* ------------------------------------------------------ motor de voz --- */
+
+.ajustes-motores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.motor {
+    padding: 14px 16px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.motor:hover {
+    border-color: var(--stroke-strong);
+    transform: translateY(-2px);
+}
+
+.motor strong {
+    display: block;
+    font-size: 13.5px;
+    pointer-events: none;
+}
+
+.motor small {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--color-dim);
+    pointer-events: none;
+}
+
+.motor.escolhido {
+    border-color: var(--gold);
+    background: linear-gradient(140deg, rgba(242, 199, 92, 0.14), var(--background-element));
+    box-shadow: 0 0 0 1px rgba(242, 199, 92, 0.3);
+}
+
+.motor.escolhido strong {
+    color: var(--gold);
+}
+
+/* ------------------------------------------------------------- cores --- */
+
+.ajustes-cores {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.cores-campos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cor {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+/* O seletor nativo, sem a moldura que o navegador põe por padrão. */
+.cor input[type="color"] {
+    width: 34px;
+    height: 26px;
+    flex-shrink: 0;
+    padding: 0;
+    background: none;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.cor input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.cor input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+}
+
+.cores-padrao {
+    align-self: flex-start;
+}
+
+/* ------------------------------------------------------------ prévia --- */
+
+/* O balão do jeito que vai aparecer no jogo. Escolher cor sem ver o
+   resultado é escolher no escuro. */
+.balao-previa {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    padding: 18px;
+    background:
+        linear-gradient(rgba(9, 2, 5, 0.35), rgba(9, 2, 5, 0.35)),
+        url('../../images/background/dark/cerejeiras.jpg') center / cover;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    transition: var(--transition);
+}
+
+/* Balões desligados: a prévia apaga em vez de mentir. */
+.balao-previa.apagada {
+    opacity: 0.25;
+    filter: grayscale(1);
+}
+
+.balao {
+    max-width: 230px;
+    padding: 10px 13px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    background: #FCFCFC;
+    color: #191919;
+    border: 2px solid #4FC3F7;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.balao-nome {
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------- salvar -- */
+
+.ajustes-fim {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid var(--stroke);
+}
+
+.ajustes-salvar {
+    padding: 12px 26px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--wine-900);
+    background: linear-gradient(180deg, var(--gold-200), var(--gold-600));
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ajustes-salvar:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+}
+
+.ajustes-salvar:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.ajustes-status {
+    font-size: 12px;
+    color: var(--color-dim);
+}
+
+.ajustes-status.ok {
+    color: var(--success);
+}
+
+/* -------------------------------------------------------- responsivo --- */
+
+@media (max-width: 1000px) {
+    .ajustes-panel {
+        grid-template-columns: 190px minmax(0, 1fr);
+        padding: 14px 20px 20px;
+    }
+
+    .ajustes-cores {
+        grid-template-columns: 1fr;
+    }
+}

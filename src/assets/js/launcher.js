@@ -8,6 +8,7 @@ import Login from './panels/login.js';
 import Home from './panels/home.js';
 import Settings from './panels/settings.js';
 import Modpack from './panels/modpack.js';
+import Ajustes from './panels/ajustes.js';
 
 // import modules
 import { logger, config, changePanel, database, popup, setBackground, accountSelect, addAccount, pkg, lang, discord, registro, appdata } from './utils.js';
@@ -67,7 +68,7 @@ class Launcher {
             }
         }
 
-        this.createPanels(Login, Home, Settings, Modpack);
+        this.createPanels(Login, Home, Settings, Modpack, Ajustes);
         this.startLauncher();
     }
 

@@ -29,6 +29,7 @@ import importar from './utils/importar.js';
 import extras from './utils/extras.js';
 import desempenho from './utils/desempenho.js';
 import pacote from './utils/pacote.js';
+import preferencias from './utils/preferencias.js';
 
 /**
  * Fundo de época.
@@ -324,5 +325,6 @@ export {
     importar as importar,
     extras as extras,
     desempenho as desempenho,
-    pacote as pacote
+    pacote as pacote,
+    preferencias as preferencias
 }

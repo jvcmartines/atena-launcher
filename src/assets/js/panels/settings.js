@@ -173,6 +173,11 @@ class Settings {
                     return changePanel('home')
                 }
 
+                // Os ajustes dos mods tem tela propria: este item nao troca de
+                // aba, troca de painel. Sem isto o clique procuraria um
+                // #ajustes-tab que nao existe e quebraria as configuracoes.
+                if (id == 'ajustes') return changePanel('ajustes')
+
                 if (activeSettingsBTN) activeSettingsBTN.classList.toggle('active-settings-BTN');
                 e.target.classList.add('active-settings-BTN');
 
