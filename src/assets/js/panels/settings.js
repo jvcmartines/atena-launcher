@@ -69,6 +69,10 @@ class Settings {
 
             let config = await this.db.readData('configClient')
             config.java_config.java_memory = { min: perfil.min, max: perfil.max }
+            // Um perfil É uma faixa. Aplicar um com o "valor único" ligado
+            // deixaria a tela mostrando um número e a configuração guardando
+            // dois, então o interruptor volta sozinho.
+            config.java_config.ram_unica = false
             await this.db.updateData('configClient', config)
 
             caixa.querySelectorAll('.perf-btn').forEach(b => b.classList.remove('active-perf'))
@@ -80,7 +84,19 @@ class Settings {
             })
 
             // O controle deslizante precisa refletir o que acabou de mudar.
-            this.memorySlider?.setValue?.(perfil.min, perfil.max)
+            //
+            // Chamava `setValue`, que o Slider não tem — o `?.` engolia a
+            // chamada em silêncio e só os números ao lado mudavam, enquanto os
+            // puxadores ficavam onde estavam, dizendo outra coisa.
+            document.querySelector('.ram-faixa').hidden = false
+            document.querySelector('.ram-so-uma').hidden = true
+            document.querySelector('.ram-unica-input').checked = false
+
+            if (this.memorySlider) {
+                this.memorySlider.minValue = perfil.min
+                this.memorySlider.maxValue = perfil.max
+                this.memorySlider.refresh()
+            }
             document.querySelector('.slider-touch-left span')?.setAttribute('value', `${perfil.min} GB`)
             document.querySelector('.slider-touch-right span')?.setAttribute('value', `${perfil.max} GB`)
         })
@@ -314,6 +330,110 @@ class Settings {
             config.java_config.java_memory = { min: min, max: max };
             this.db.updateData('configClient', config);
         });
+
+        this.ramDeUmValorSo(sliderMax);
+    }
+
+    /**
+     * Um valor só, em vez de uma faixa.
+     *
+     * O Java trabalha com dois números: onde a memória começa (-Xms) e até onde
+     * pode crescer (-Xmx). A faixa é o padrão, e faz sentido — mas quem quer
+     * dizer "8 GB e pronto" tinha que arrastar os dois puxadores até o mesmo
+     * ponto, e com passo de 0,5 GB eles nem sempre casavam.
+     *
+     * Ligado, os dois viram o mesmo número. Isso não é um truque de interface:
+     * -Xms igual a -Xmx é uma escolha de verdade, e poupa o Java de ficar
+     * redimensionando a memória enquanto o jogo roda.
+     *
+     * A faixa anterior fica guardada para quando a pessoa voltar atrás — sem
+     * isso, desligar o interruptor deixaria os dois puxadores empilhados.
+     */
+    async ramDeUmValorSo(teto) {
+        const chave = document.querySelector('.ram-unica-input')
+        const faixa = document.querySelector('.ram-faixa')
+        const caixa = document.querySelector('.ram-so-uma')
+        const barra = document.querySelector('.ram-so-uma-range')
+        const rotulo = document.querySelector('.ram-so-uma-valor')
+        if (!chave || !faixa || !caixa || !barra || !rotulo) return
+
+        barra.max = teto
+
+        const config = await this.db.readData('configClient')
+        const memoria = config?.java_config?.java_memory || { min: 4, max: 8 }
+
+        // Os dois já iguais? Então a pessoa já está num valor só, mesmo que o
+        // interruptor nunca tenha sido ligado — é o estado que importa.
+        const umValorSo = config?.java_config?.ram_unica ?? (Number(memoria.min) === Number(memoria.max))
+
+        const desenhar = valor => {
+            barra.value = valor
+            rotulo.textContent = `${valor} GB`
+        }
+
+        const mostrar = ligado => {
+            faixa.hidden = ligado
+            caixa.hidden = !ligado
+            chave.checked = ligado
+            // O slider de dois puxadores mede errado enquanto está escondido.
+            if (!ligado) this.memorySlider?.refresh()
+        }
+
+        desenhar(Math.min(Number(memoria.max), teto))
+        mostrar(umValorSo)
+
+        barra.addEventListener('input', () => desenhar(Number(barra.value)))
+
+        barra.addEventListener('change', async () => {
+            const valor = Number(barra.value)
+            const config = await this.db.readData('configClient')
+            config.java_config.java_memory = { min: valor, max: valor }
+            config.java_config.ram_unica = true
+            await this.db.updateData('configClient', config)
+        })
+
+        chave.addEventListener('change', async () => {
+            const ligado = chave.checked
+            const config = await this.db.readData('configClient')
+            const atual = config.java_config.java_memory
+
+            if (ligado) {
+                // Guarda a faixa antes de achatar, para o caminho de volta.
+                //
+                // Só se ela for mesmo uma faixa: quem já estava num valor só
+                // não tem nada que valha guardar, e gravar {8, 8} aqui faria o
+                // caminho de volta devolver 8–8, que não é faixa nenhuma.
+                if (Number(atual.min) !== Number(atual.max)) {
+                    config.java_config.ram_faixa = { min: Number(atual.min), max: Number(atual.max) }
+                }
+                const valor = Math.min(Number(atual.max), teto)
+                config.java_config.java_memory = { min: valor, max: valor }
+                desenhar(valor)
+            } else {
+                const guardada = config.java_config.ram_faixa
+                const max = Math.min(Number(atual.max), teto)
+
+                // Uma "faixa" com os dois números iguais não é faixa, e devolvê-la
+                // deixaria os dois puxadores empilhados — que é exatamente o
+                // estado do qual a pessoa está saindo. Pode existir gravada de
+                // antes, então não basta parar de gravá-la: é preciso ignorá-la.
+                const vale = guardada && guardada.min < guardada.max && guardada.max === max
+
+                // Sem faixa aproveitável, 2 GB abaixo do topo é um começo honesto.
+                const min = vale
+                    ? guardada.min
+                    : Math.max(2, Math.min(max - 2, max))
+                config.java_config.java_memory = { min, max }
+                this.memorySlider.minValue = min
+                this.memorySlider.maxValue = max
+                document.querySelector('.slider-touch-left span').setAttribute('value', `${min} GB`)
+                document.querySelector('.slider-touch-right span').setAttribute('value', `${max} GB`)
+            }
+
+            config.java_config.ram_unica = ligado
+            await this.db.updateData('configClient', config)
+            mostrar(ligado)
+        })
     }
 
     async javaPath() {

@@ -55,11 +55,18 @@ const LINGUAS = [
     { codigo: 'fil-PH', nome: 'Filipino (Pilipinas)' }
 ];
 
-/** As cores que o mod usa de fábrica. Servem de "voltar ao padrão". */
+/**
+ * As cores que o mod usa de fábrica. Servem de "voltar ao padrão".
+ *
+ * São as três que pintam o balão acima dos jogadores — o
+ * `SpeechBubbleRenderer` do mod lê fundo, texto e borda, e mais nada. A cor de
+ * destaque (`balloonAccentColor`) existe no arquivo mas é da caixa de legendas
+ * do HUD, não do balão; quem quiser mudá-la faz isso pela tela do mod dentro
+ * do jogo, e o launcher não encosta nela.
+ */
 const CORES_PADRAO = {
     corFundo: 'FCFCFC',
     corTexto: '191919',
-    corDestaque: '4FC3F7',
     corBorda: 'B4B4B9'
 };
 
@@ -191,7 +198,6 @@ class Preferencias {
             escolhas.motor = this.lerDoToml(traducao, 'speech', 'speechEngine');
             escolhas.corFundo = this.lerDoToml(traducao, 'balloons', 'balloonBgColor');
             escolhas.corTexto = this.lerDoToml(traducao, 'balloons', 'balloonTextColor');
-            escolhas.corDestaque = this.lerDoToml(traducao, 'balloons', 'balloonAccentColor');
             escolhas.corBorda = this.lerDoToml(traducao, 'balloons', 'balloonBorderColor');
         }
 
@@ -244,7 +250,6 @@ class Preferencias {
 
             texto('balloons', 'balloonBgColor', escolhas.corFundo);
             texto('balloons', 'balloonTextColor', escolhas.corTexto);
-            texto('balloons', 'balloonAccentColor', escolhas.corDestaque);
             texto('balloons', 'balloonBorderColor', escolhas.corBorda);
 
             if (escolhas.mostrarBaloes !== undefined) {

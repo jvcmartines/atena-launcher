@@ -282,15 +282,9 @@
     line-height: 1.45;
     background: #FCFCFC;
     color: #191919;
-    border: 2px solid #4FC3F7;
+    border: 2px solid #B4B4B9;
     border-radius: 10px;
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
-}
-
-.balao-nome {
-    margin-bottom: 3px;
-    font-size: 11px;
-    font-weight: 700;
 }
 
 /* ------------------------------------------------------------- salvar -- */

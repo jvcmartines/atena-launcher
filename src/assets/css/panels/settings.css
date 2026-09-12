@@ -298,6 +298,65 @@
 
 /* -------------------------------------------------------- slider RAM --- */
 
+/* Os dois modos ocupam o mesmo lugar: a faixa de dois puxadores e a barra de
+   um valor so. Quem esta escondido nao mede nada, e por isso o slider de dois
+   puxadores precisa de um refresh ao reaparecer. */
+.ram-faixa,
+.ram-so-uma {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 52%;
+    min-width: 220px;
+    margin: 12px 1.5rem 12px 0;
+}
+
+.ram-faixa[hidden],
+.ram-so-uma[hidden] {
+    display: none;
+}
+
+.ram-so-uma-range {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.ram-so-uma-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: none;
+    cursor: grab;
+}
+
+.ram-so-uma-range:active::-webkit-slider-thumb {
+    cursor: grabbing;
+}
+
+.ram-so-uma-valor {
+    flex-shrink: 0;
+    min-width: 58px;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--gold);
+}
+
+/* O interruptor fica acima dos dois, alinhado com o texto da secao. */
+.ram-unica {
+    margin: 4px 0 0;
+}
+
 .memory-slider {
     position: relative;
     margin: 12px 1.5rem 12px 0;
@@ -305,6 +364,12 @@
     width: 52%;
     min-width: 220px;
     user-select: none;
+}
+
+/* Dentro do embrulho, o slider ja nao precisa das medidas proprias. */
+.ram-faixa .memory-slider {
+    width: 100%;
+    margin: 0;
 }
 
 .slider-touch-left,

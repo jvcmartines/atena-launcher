@@ -63,11 +63,29 @@
             <div class="settings-elements-box">
                 <div class="setting-text" data-i18n-html="settings.ram_text"></div>
 
+                <!-- Escolher uma faixa (7-8 GB) e o padrao do Java: ele comeca
+                     no minimo e cresce ate o maximo. Quem quer dizer "8 GB e
+                     pronto" tinha que arrastar os dois puxadores ate o mesmo
+                     ponto, o que e chato e nem sempre casa. Este interruptor
+                     troca os dois puxadores por um so. -->
+                <label class="toggle ram-unica">
+                    <input type="checkbox" class="toggle-input ram-unica-input">
+                    <span class="toggle-switch"></span>
+                    <span data-i18n="settings.ram_single"></span>
+                </label>
+
                 <div class="settings-elements content-evenly">
-                    <div class="memory-slider" min="2" max="24" step="0.5">
-                        <div class="slider-touch-left"><span value="0 GB"></span></div>
-                        <div class="slider-touch-right"><span value="0 GB"></span></div>
-                        <div class="slider-line"><span></span></div>
+                    <div class="ram-faixa">
+                        <div class="memory-slider" min="2" max="24" step="0.5">
+                            <div class="slider-touch-left"><span value="0 GB"></span></div>
+                            <div class="slider-touch-right"><span value="0 GB"></span></div>
+                            <div class="slider-line"><span></span></div>
+                        </div>
+                    </div>
+
+                    <div class="ram-so-uma" hidden>
+                        <input type="range" class="ram-so-uma-range" min="2" max="24" step="0.5">
+                        <span class="ram-so-uma-valor">0 GB</span>
                     </div>
 
                     <div class="ram-info-block">

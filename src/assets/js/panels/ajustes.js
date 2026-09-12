@@ -96,7 +96,7 @@ class Ajustes {
 
         const atual = {
             falo: 'en', baloes: 'pt', mostrarBaloes: true, motor: 'web_speech',
-            corFundo: 'FCFCFC', corTexto: '191919', corDestaque: '4FC3F7',
+            corFundo: 'FCFCFC', corTexto: '191919', corBorda: 'B4B4B9',
             microfone: '',
             ...(nosArquivos || {}),
             ...(configClient?.setup?.escolhas || {})
@@ -111,11 +111,7 @@ class Ajustes {
 
         this.porCor('#ajuste-cor-fundo', atual.corFundo)
         this.porCor('#ajuste-cor-texto', atual.corTexto)
-        this.porCor('#ajuste-cor-destaque', atual.corDestaque)
-
-        const conta = await this.db.readData('accounts', configClient?.account_selected)
-        const nome = document.querySelector('.balao-nome')
-        if (nome) nome.textContent = conta?.name || 'Steve'
+        this.porCor('#ajuste-cor-borda', atual.corBorda)
 
         this.pintarPrevia()
 
@@ -182,7 +178,7 @@ class Ajustes {
     /* ------------------------------------------------------------ cores -- */
 
     previa() {
-        for (const id of ['#ajuste-cor-fundo', '#ajuste-cor-texto', '#ajuste-cor-destaque']) {
+        for (const id of ['#ajuste-cor-fundo', '#ajuste-cor-texto', '#ajuste-cor-borda']) {
             document.querySelector(id)?.addEventListener('input', () => this.pintarPrevia())
         }
         document.querySelector('#ajuste-mostrar')?.addEventListener('change', () => this.pintarPrevia())
@@ -196,10 +192,7 @@ class Ajustes {
 
         balao.style.background = document.querySelector('#ajuste-cor-fundo').value
         balao.style.color = document.querySelector('#ajuste-cor-texto').value
-        balao.style.borderColor = document.querySelector('#ajuste-cor-destaque').value
-
-        const nome = document.querySelector('.balao-nome')
-        if (nome) nome.style.color = document.querySelector('#ajuste-cor-destaque').value
+        balao.style.borderColor = document.querySelector('#ajuste-cor-borda').value
 
         // Balões desligados: a prévia mostra isso apagando, em vez de mentir.
         if (previa) previa.classList.toggle('apagada', !document.querySelector('#ajuste-mostrar').checked)
@@ -208,7 +201,7 @@ class Ajustes {
     corPadrao() {
         this.porCor('#ajuste-cor-fundo', preferencias.CORES_PADRAO.corFundo)
         this.porCor('#ajuste-cor-texto', preferencias.CORES_PADRAO.corTexto)
-        this.porCor('#ajuste-cor-destaque', preferencias.CORES_PADRAO.corDestaque)
+        this.porCor('#ajuste-cor-borda', preferencias.CORES_PADRAO.corBorda)
         this.pintarPrevia()
     }
 
@@ -242,7 +235,7 @@ class Ajustes {
             motor: this.motor || 'web_speech',
             corFundo: this.deCor('#ajuste-cor-fundo'),
             corTexto: this.deCor('#ajuste-cor-texto'),
-            corDestaque: this.deCor('#ajuste-cor-destaque'),
+            corBorda: this.deCor('#ajuste-cor-borda'),
             microfone: document.querySelector('#ajuste-microfone').value
         }
 
