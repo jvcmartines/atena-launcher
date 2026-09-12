@@ -62,10 +62,44 @@ for (const arquivo of listar(RAIZ, /\.js$/)) colher(fs.readFileSync(arquivo, 'ut
 // querySelector('...') seguido de algo que desreferencia na mesma expressão.
 const BUSCA = /document\.querySelector\(\s*(['"])([^'"]+)\1\s*\)\s*(\??\.|\[)/g;
 
+/**
+ * Listas de seletores percorridas num laço.
+ *
+ * `for (const s of ['.a', '.b']) document.querySelector(s)` escapava da
+ * conferência acima, porque ali o seletor é uma variável — e foi assim que
+ * `.autojoin` continuou sendo escondido depois de virar `.toggles`, deixando
+ * os interruptores na tela durante o download.
+ *
+ * Uma lista só conta como lista de seletores quando TODOS os itens têm a
+ * forma de um, e nenhum é extensão de arquivo — senão `['.html', '.js']`
+ * viraria falso alarme.
+ */
+const EXTENSOES = new Set([
+    '.html', '.js', '.mjs', '.cjs', '.css', '.json', '.jar', '.zip', '.txt',
+    '.log', '.png', '.jpg', '.toml', '.properties', '.disabled', '.parte', '.gz'
+]);
+
+const LISTA = /\[\s*((?:['"][.#][^'"]+['"]\s*,\s*)+['"][.#][^'"]+['"])\s*\]/g;
+
 let problemas = 0;
 
 for (const arquivo of listar(RAIZ, /\.js$/)) {
     const codigo = fs.readFileSync(arquivo, 'utf8');
+
+    if (codigo.includes('querySelector(')) {
+        for (const achado of codigo.matchAll(LISTA)) {
+            const itens = [...achado[1].matchAll(/['"]([^'"]+)['"]/g)].map(m => m[1]);
+            if (itens.some(i => EXTENSOES.has(i.toLowerCase()))) continue;
+            if (!itens.every(i => /^[.#][A-Za-z0-9_-]+$/.test(i))) continue;
+
+            for (const seletor of itens) {
+                if (conhecidos.has(seletor)) continue;
+                const linha = codigo.slice(0, achado.index).split('\n').length;
+                console.log(`${path.relative(RAIZ, arquivo)}:${linha}  '${seletor}' na lista de seletores não existe em nenhum HTML`);
+                problemas += 1;
+            }
+        }
+    }
 
     for (const achado of codigo.matchAll(BUSCA)) {
         const seletor = achado[2];

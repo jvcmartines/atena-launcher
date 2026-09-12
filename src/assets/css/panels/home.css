@@ -538,6 +538,11 @@
     mask-image: var(--ico-pack);
 }
 
+.ico-stats {
+    -webkit-mask-image: var(--ico-stats);
+    mask-image: var(--ico-stats);
+}
+
 .ico-support {
     -webkit-mask-image: var(--ico-support);
     mask-image: var(--ico-support);

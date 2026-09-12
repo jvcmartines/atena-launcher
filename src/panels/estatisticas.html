@@ -1,0 +1,39 @@
+<div class="stats-panel">
+
+    <!-- Mesma casca do modpack e das configuracoes: menu a esquerda,
+         conteudo a direita. Aqui a coluna da esquerda e a ficha da pessoa -
+         cabeca, nick e em que lugar ela esta -, e a direita e o resto. -->
+    <nav class="nav-stats glass">
+        <p data-i18n="stats.title"></p>
+
+        <div class="me-card">
+            <div class="me-head"></div>
+            <div class="me-name"></div>
+            <!-- O lugar geral e o de horas: e o numero que resume o resto. -->
+            <div class="me-rank"></div>
+        </div>
+
+        <div class="me-note" data-i18n="stats.side"></div>
+
+        <div class="stats-back nav-back" data-i18n="settings.back"></div>
+    </nav>
+
+    <div class="stats-body content-scroll">
+
+        <!-- Enquanto os numeros nao chegam, e quando nao da para chegar. -->
+        <div class="stats-state" hidden></div>
+
+        <div class="stats-content" hidden>
+            <div class="titre-tab" data-i18n="stats.mine"></div>
+            <p class="tab-sub" data-i18n="stats.mine_text"></p>
+            <div class="stats-grid"></div>
+
+            <div class="titre-tab" data-i18n="stats.board"></div>
+            <p class="tab-sub" data-i18n="stats.board_text"></p>
+
+            <div class="board-tabs"></div>
+            <div class="board-list"></div>
+        </div>
+
+    </div>
+</div>

@@ -20,6 +20,7 @@ class Home {
         this.db = new database();
         this.socialLick()
         this.copyServerIp()
+        this.estatisticasBotao()
 
         // Banido: nem tenta montar a lista de modpacks — o servidor nao vai
         // devolver nenhum, e a pessoa precisa e de saber o motivo.
@@ -788,6 +789,16 @@ class Home {
         })
     }
 
+    /**
+     * Estatísticas: a ficha da pessoa no mundo do servidor, e o placar.
+     *
+     * Fica fora da ramificação de banido de propósito — os números são do que
+     * já aconteceu, e continuar podendo vê-los não custa nada.
+     */
+    estatisticasBotao() {
+        document.querySelector('.stats-btn')?.addEventListener('click', () => changePanel('estatisticas'))
+    }
+
     /** Suporte: o mesmo relatório do menu do modpack, a um clique da barra. */
     suporteBotao() {
         document.querySelector('.support-btn')?.addEventListener('click', async () => {
@@ -1146,7 +1157,7 @@ class Home {
     async entrarEmProgresso({ animar = true } = {}) {
         if (animar) await this.animarSaida()
 
-        for (let seletor of ['.play-instance', '.autojoin', '.news-strip']) {
+        for (let seletor of ['.play-instance', '.toggles', '.news-strip']) {
             let elemento = document.querySelector(seletor)
             if (elemento) elemento.style.display = 'none'
         }
@@ -1168,7 +1179,7 @@ class Home {
         let play = document.querySelector('.play-instance')
         if (play) play.style.display = 'flex'
 
-        for (let seletor of ['.autojoin', '.news-strip']) {
+        for (let seletor of ['.toggles', '.news-strip']) {
             let elemento = document.querySelector(seletor)
             // Só devolve o que estava lá antes: a faixa de avisos e as horas
             // podem nunca ter aparecido.

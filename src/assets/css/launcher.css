@@ -5,6 +5,7 @@
 @import 'panels/settings.css';
 @import 'panels/modpack.css';
 @import 'panels/ajustes.css';
+@import 'panels/estatisticas.css';
 
 /**
  * Casca do launcher: janela sem moldura nativa, barra de título própria,
