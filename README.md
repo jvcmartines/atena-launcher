@@ -94,18 +94,6 @@ version by dragging in a `.zip` — no touching files on the server, no SSH.
 - **Three languages:** English (default), Portuguese and Spanish, switchable by
   the player.
 
-### For staff
-
-- **Publish a `.zip`.** Drag the pack into the panel, hit publish, and players
-  get it the next time they open the launcher.
-- **Discord verification.** Players connect their account, and staff can see
-  which Minecraft nick belongs to whom.
-- **Role-gated modpacks.** A test version only staff can see — the filter runs
-  on the server, so there's no way around it.
-- **Ban from the launcher**, with the reason shown to the person.
-- **News and maintenance mode**, without restarting anything.
-
----
 
 ## Running it
 
