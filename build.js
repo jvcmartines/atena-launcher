@@ -143,6 +143,12 @@ class Index {
             console.log('Build finalizado! Os instaladores estão na pasta dist/')
         }).catch(err => {
             console.error('Erro durante o build!', err)
+            // Sair com erro, e não só avisar. Com o código de saída 0, o CI
+            // marcava o job como sucesso: a v1.8.2 saiu como "latest" sem
+            // nenhum instalador de Windows porque um download do Electron
+            // falhou no meio, e ninguém viu — o launcher dos jogadores
+            // procurava o latest.yml e recebia 404.
+            process.exitCode = 1
         })
     }
 
