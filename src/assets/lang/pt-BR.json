@@ -342,5 +342,6 @@
     "ajustes.save_first": "Salvar e começar a jogar",
     "ajustes.saved": "Salvo.",
     "ajustes.saved_later": "Salvo. Entra assim que o modpack for instalado.",
-    "ajustes.failed": "Não consegui salvar. Feche o jogo e tente de novo."
+    "ajustes.failed": "Não consegui salvar. Feche o jogo e tente de novo.",
+    "home.sync_removed": "{count} arquivo(s) que o modpack não usa mais foram removidos."
 }

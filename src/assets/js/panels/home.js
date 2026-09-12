@@ -1333,6 +1333,9 @@ class Home {
 
             let resultado = await modpack.sync(base, instance, {
                 ignored: protegidos,
+                // O que o launcher oferece como opcional nunca e apagado por
+                // ter saido do pack: e o caso do Essential.
+                naoApagar: extras.caminhosDoCatalogo(),
                 concorrencia: Number(configClient?.launcher_config?.download_multi) || 16,
                 pausa,
                 aoProgresso: dados => {
@@ -1412,6 +1415,11 @@ class Home {
                 new popup().openPopup({
                     title: lang.t(anterior === 'install' ? 'home.install' : 'home.update'),
                     content: lang.t('home.sync_done', { count: resultado.baixados }) +
+                        // Tirar mod tambem e mudanca, e some sem deixar rastro
+                        // se ninguem disser.
+                        (resultado.removidos?.length
+                            ? '<br><br>' + lang.t('home.sync_removed', { count: resultado.removidos.length })
+                            : '') +
                         // Dizer que os arquivos da pessoa ficaram e o que
                         // transforma "confie em mim" em algo verificavel.
                         (resultado.preservados?.length

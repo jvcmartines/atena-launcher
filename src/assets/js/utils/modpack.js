@@ -251,7 +251,7 @@ class Modpack {
      *
      * `aoProgresso({ fase, feitos, total, bytes, bytesTotais, arquivo })`
      */
-    async sync(basePath, instance, { ignored = [], concorrencia = 5, aoProgresso, pausa } = {}) {
+    async sync(basePath, instance, { ignored = [], concorrencia = 5, aoProgresso, pausa, naoApagar = [] } = {}) {
         const pasta = this.dir(basePath, instance.name);
         const arquivos = await this.manifest(instance.url);
 
@@ -268,7 +268,7 @@ class Modpack {
         try {
             return await this.sincronizar({
                 pasta, arquivos, protegidos, cache, cacheNovo,
-                concorrencia, aoProgresso, pausa
+                concorrencia, aoProgresso, pausa, naoApagar: new Set(naoApagar)
             });
         } finally {
             this.writeHashCache(pasta, cacheNovo);
@@ -276,7 +276,7 @@ class Modpack {
     }
 
     /** O trabalho em si. Separado so para o cache acima ter um `finally`. */
-    async sincronizar({ pasta, arquivos, protegidos, cache, cacheNovo, concorrencia, aoProgresso, pausa }) {
+    async sincronizar({ pasta, arquivos, protegidos, cache, cacheNovo, concorrencia, aoProgresso, pausa, naoApagar }) {
 
         /* --- 1. o que precisa vir do servidor ------------------------------ */
 
@@ -378,6 +378,10 @@ class Modpack {
             }
         }
 
+        /* --- 1.5 o que o modpack deixou de ter ------------------------------ */
+
+        const removidos = await this.apagarOsQueSairam(pasta, arquivos, cache, protegidos, naoApagar);
+
         /* --- 2. baixar o que falta ----------------------------------------- */
 
         const bytesTotais = faltando.reduce((soma, f) => soma + (f.size || 0), 0);
@@ -438,7 +442,7 @@ class Modpack {
         const desistiu = resultados.find(r => r.status === 'rejected');
         if (desistiu) throw desistiu.reason;
 
-        return { baixados, mantidos, bytes, falhas, preservados };
+        return { baixados, mantidos, bytes, falhas, preservados, removidos };
     }
 
     /**
@@ -457,6 +461,85 @@ class Modpack {
         const limpo = String(caminho).replace(/\\/g, '/').toLowerCase();
         if (limpo.startsWith('mods/')) return false;
         return !limpo.endsWith('.jar');
+    }
+
+    /**
+     * Apaga o que o modpack deixou de ter.
+     *
+     * Sem isto, tirar um mod do pack não tirava nada da máquina de ninguém: a
+     * sincronização só baixa o que falta, e nunca apagou nada. O jogador ficava
+     * com um mod que o servidor não tem mais — e o Forge recusa a conexão
+     * quando as duas listas não batem. Removeram-se sete mods numa atualização
+     * e foi assim que isto apareceu.
+     *
+     * A regra é estreita de propósito: só sai o que NÓS pusemos ali. O cache de
+     * hashes é a lista do que o launcher instalou em algum momento; um arquivo
+     * que está nele e não está mais no manifesto é nosso e virou lixo. Um mod
+     * que a pessoa colocou por conta própria nunca esteve no cache, então
+     * nunca é tocado.
+     *
+     * Três exceções, e cada uma tem razão:
+     *   - o que o jogador protegeu nas configurações;
+     *   - o que ele editou e a sincronização preserva (não está no manifesto
+     *     com aquele hash, mas o caminho está — este caso nem chega aqui);
+     *   - os mods opcionais do launcher. O Essential sai do pack e vira
+     *     opcional: apagá-lo de quem já o tem seria tirar uma coisa que a
+     *     pessoa pode ter escolhido ter.
+     */
+    async apagarOsQueSairam(pasta, arquivos, cache, protegidos, naoApagar) {
+        const noManifesto = new Set(arquivos.map(a => a.path));
+        const removidos = [];
+        const pastasTocadas = new Set();
+
+        for (const caminho of Object.keys(cache)) {
+            if (noManifesto.has(caminho)) continue;
+            if (protegidos.has(caminho)) continue;
+            if (naoApagar && naoApagar.has(caminho)) continue;
+
+            const completo = path.join(pasta, caminho);
+            try {
+                await fsp.rm(completo, { force: true });
+                removidos.push(caminho);
+                pastasTocadas.add(path.dirname(completo));
+            } catch (err) {
+                console.error('[modpack] não consegui apagar', caminho, err.message);
+            }
+        }
+
+        // Pasta que ficou vazia porque o mod inteiro saiu não precisa ficar ali.
+        for (const dir of pastasTocadas) await this.apagarSeVazia(dir, pasta);
+
+        return removidos;
+    }
+
+    /**
+     * Apaga a pasta se ela ficou vazia, e sobe enquanto continuar vazia.
+     *
+     * Nunca passa do limite: `raiz` é a pasta da instância, e o laço para ali.
+     * Sem esse freio, uma cadeia de pastas vazias levaria o apagamento para
+     * fora do modpack.
+     */
+    async apagarSeVazia(dir, raiz) {
+        const limite = path.resolve(raiz);
+        let atual = path.resolve(dir);
+
+        while (atual.startsWith(limite) && atual !== limite) {
+            let conteudo;
+            try {
+                conteudo = await fsp.readdir(atual);
+            } catch {
+                return;
+            }
+
+            if (conteudo.length) return;
+
+            try {
+                await fsp.rmdir(atual);
+            } catch {
+                return;
+            }
+            atual = path.dirname(atual);
+        }
     }
 
     /**

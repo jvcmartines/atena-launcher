@@ -342,5 +342,6 @@
     "ajustes.save_first": "Save and start playing",
     "ajustes.saved": "Saved.",
     "ajustes.saved_later": "Saved. It goes in as soon as the modpack is installed.",
-    "ajustes.failed": "Couldn't save. Close the game and try again."
+    "ajustes.failed": "Couldn't save. Close the game and try again.",
+    "home.sync_removed": "{count} file(s) the modpack no longer uses were removed."
 }

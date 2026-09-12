@@ -298,6 +298,23 @@ class Extras {
         return caminhos;
     }
 
+    /**
+     * Os caminhos de tudo que o launcher oferece como opcional.
+     *
+     * Serve para a sincronizacao nunca apagar um destes quando ele sai do
+     * modpack. E exatamente o que aconteceu com o Essential: ele deixou de vir
+     * no pack e virou opcional, e apagar de quem ja o tinha seria tirar uma
+     * coisa que a pessoa pode ter escolhido ter.
+     */
+    caminhosDoCatalogo() {
+        const caminhos = [];
+        for (const item of CATALOGO) {
+            caminhos.push(item.arquivo, `${item.arquivo}${SUFIXO}`);
+            caminhos.push(...(item.runtime || []));
+        }
+        return caminhos;
+    }
+
     /* ------------------------------------------------- marcador ----------- */
 
     lerMarcador(pasta) {

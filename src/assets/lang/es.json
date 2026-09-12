@@ -342,5 +342,6 @@
     "ajustes.save_first": "Guardar y empezar a jugar",
     "ajustes.saved": "Guardado.",
     "ajustes.saved_later": "Guardado. Entra en cuanto se instale el modpack.",
-    "ajustes.failed": "No pude guardar. Cierra el juego e inténtalo de nuevo."
+    "ajustes.failed": "No pude guardar. Cierra el juego e inténtalo de nuevo.",
+    "home.sync_removed": "{count} archivo(s) que el modpack ya no usa fueron eliminados."
 }
