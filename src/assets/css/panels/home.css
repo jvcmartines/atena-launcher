@@ -417,6 +417,15 @@
     border-top: 1px solid var(--stroke);
 }
 
+/* Esquerda da barra: quem esta jogando. O cartao das contas e as proprias
+   estatisticas, que sao a mesma coisa - numeros desta pessoa. */
+.bottom-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
 /* O cartao do jogador virou botao: leva as contas, onde se troca e se
    acrescenta. */
 .account-chip {
@@ -484,13 +493,23 @@
     background: var(--stroke);
 }
 
-/* Todos os botoes da barra sao iguais: mesmo tamanho, mesmo tratamento. */
+/* Todos os botoes da barra sao iguais: mesma altura, mesmo tratamento.
+   A largura e que varia, porque alguns levam nome.
+
+   Seis simbolos abstratos em fila nao se leem: uma caixa, uma folha, um alvo
+   e uma engrenagem nao dizem o que fazem, e descobrir exigia passar o mouse
+   em cada um. Os tres ambiguos ganharam nome. Engrenagem, Discord e globo
+   ficaram sem, porque sao os unicos que qualquer pessoa ja le de relance -
+   pos-los com nome so gastaria a barra. */
 .bar-btn {
     position: relative;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     width: 36px;
     height: 36px;
+    padding: 0;
     color: var(--color-dim);
     background: transparent;
     border: 1px solid transparent;
@@ -503,6 +522,35 @@
     color: var(--gold);
     background: var(--background-element);
     border-color: var(--stroke);
+}
+
+/* Com nome o botao deixa de ser quadrado e passa a ter a largura do texto. */
+.bar-btn:has(.bar-label) {
+    width: auto;
+    padding: 0 13px 0 11px;
+}
+
+.bar-label {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Janela estreita: os nomes saem e os botoes voltam a ser quadrados, que e o
+   que cabe. O tooltip continua ali para quem precisar.
+
+   1160 e medido, nao chutado: com os rotulos em portugues, que sao os mais
+   longos dos tres idiomas, a barra pede 1041 px. O limite deixa uma folga de
+   ~120 px para um nick comprido antes de a barra apertar. */
+@media (max-width: 1160px) {
+    .bar-label {
+        display: none;
+    }
+
+    .bar-btn:has(.bar-label) {
+        width: 36px;
+        padding: 0;
+    }
 }
 
 .bar-icon {
@@ -1164,10 +1212,12 @@
 /* O botao de avisos agora e um .bar-btn como os outros; o que sobra aqui e
    so o que e dele: o ponto de nao-lido. */
 /* Ponto dourado enquanto houver aviso que esta pessoa ainda não abriu. */
+/* Ancorado ao icone, e nao a direita do botao: com nome, a direita do botao e
+   o fim do texto, e o ponto ficava boiando longe do que marca. */
 .news-dot {
     position: absolute;
     top: 6px;
-    right: 6px;
+    left: 22px;
     width: 8px;
     height: 8px;
     border-radius: 50%;

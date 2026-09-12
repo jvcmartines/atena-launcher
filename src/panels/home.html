@@ -70,24 +70,33 @@
     <!-- Barra escura: a imagem de fundo cobria a tela inteira e os botoes
          flutuavam soltos em cima dela. Aqui eles ganham chao. -->
     <footer class="home-bottom">
-        <!-- O cartao do jogador virou botao: leva as contas, onde se troca e
-             se acrescenta. -->
-        <button class="account-chip" data-i18n-title="account.manage">
-            <div class="head-wrap">
-                <div class="player-head"></div>
-                <img class="discord-badge" alt="">
-            </div>
-            <div class="account-meta">
-                <div class="player-line">
-                    <span class="player-name" data-i18n="account.loading"></span>
-                    <span class="staff-badge" data-i18n="account.staff"></span>
-                    <!-- Horas jogadas, vindas do mundo do servidor. Some quando
-                         o nick nunca entrou. -->
-                    <span class="player-hours" hidden></span>
+        <!-- Esquerda: quem esta jogando. O cartao leva as contas, e as
+             estatisticas ficam ao lado dele porque sao a mesma coisa -
+             numeros desta pessoa. Estavam na direita, junto de coisas que nao
+             tem nada com ela. -->
+        <div class="bottom-left">
+            <button class="account-chip" data-i18n-title="account.manage">
+                <div class="head-wrap">
+                    <div class="player-head"></div>
+                    <img class="discord-badge" alt="">
                 </div>
-                <div class="player-type" data-i18n="account.connected"></div>
+                <div class="account-meta">
+                    <div class="player-line">
+                        <span class="player-name" data-i18n="account.loading"></span>
+                        <span class="staff-badge" data-i18n="account.staff"></span>
+                        <!-- Horas jogadas, vindas do mundo do servidor. Some quando
+                             o nick nunca entrou. -->
+                        <span class="player-hours" hidden></span>
+                    </div>
+                    <div class="player-type" data-i18n="account.connected"></div>
+                </div>
+            </button>
+
+            <div class="bar-btn stats-btn" data-i18n-title="stats.title">
+                <span class="bar-icon ico-stats"></span>
+                <span class="bar-label" data-i18n="stats.bar"></span>
             </div>
-        </button>
+        </div>
 
         <div class="bottom-right">
             <div class="status-player-count" data-i18n-title="home.players_title">
@@ -100,19 +109,18 @@
 
             <div class="bar-btn pack-menu-btn" data-i18n-title="home.pack_options">
                 <span class="bar-icon ico-pack"></span>
+                <span class="bar-label" data-i18n="home.bar_pack"></span>
             </div>
 
             <div class="bar-btn news-btn" data-i18n-title="news.title">
                 <span class="bar-icon ico-news"></span>
+                <span class="bar-label" data-i18n="home.bar_news"></span>
                 <span class="news-dot" hidden></span>
-            </div>
-
-            <div class="bar-btn stats-btn" data-i18n-title="stats.title">
-                <span class="bar-icon ico-stats"></span>
             </div>
 
             <div class="bar-btn support-btn" data-i18n-title="support.bar_title">
                 <span class="bar-icon ico-support"></span>
+                <span class="bar-label" data-i18n="home.bar_support"></span>
             </div>
 
             <div class="bar-btn social-block" data-url="https://discord.gg/92cDk8rZKK" title="Discord">
