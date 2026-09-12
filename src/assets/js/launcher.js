@@ -182,7 +182,6 @@ class Launcher {
                     download_multi: 16,
                     lang: lang.defaultCode,
                     protected: [],
-                    theme: 'auto',
                     closeLauncher: 'close-launcher',
                     intelEnabledMac: true
                 }

@@ -73,18 +73,13 @@ function dentroDaFaixa(mes, dia, de, ate) {
     return inicio <= fim ? agora >= inicio && agora <= fim : agora >= inicio || agora <= fim;
 }
 
-async function setBackground(theme) {
-    if (typeof theme == 'undefined') {
-        let databaseLauncher = new database();
-        let configClient = await databaseLauncher.readData('configClient');
-        theme = configClient?.launcher_config?.theme || "auto"
-        theme = await ipcRenderer.invoke('is-dark-theme', theme).then(res => res)
-    }
+/** O fundo da janela. Só existe o visual escuro. */
+async function setBackground() {
     let background
     let body = document.body;
-    body.className = theme ? 'dark global' : 'light global';
+    body.className = 'dark global';
 
-    let pastaBase = `${__dirname}/assets/images/background/${theme ? 'dark' : 'light'}`;
+    let pastaBase = `${__dirname}/assets/images/background/dark`;
     let evento = pastaDoEvento(pastaBase);
     let pasta = evento || pastaBase;
 
@@ -97,12 +92,10 @@ async function setBackground(theme) {
 
         let Background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
         let sufixo = pasta === pastaBase ? '' : `/${pasta.split('/').pop()}`;
-        let scrim = theme
-            ? 'linear-gradient(180deg, rgba(16,3,10,.52) 0%, rgba(16,3,10,.76) 52%, rgba(16,3,10,.95) 100%)'
-            : 'linear-gradient(180deg, rgba(255,250,246,.5) 0%, rgba(255,248,244,.72) 52%, rgba(252,244,240,.9) 100%)';
-        background = `${scrim}, url(./assets/images/background/${theme ? 'dark' : 'light'}${sufixo}/${Background})`;
+        let scrim = 'linear-gradient(180deg, rgba(16,3,10,.52) 0%, rgba(16,3,10,.76) 52%, rgba(16,3,10,.95) 100%)';
+        background = `${scrim}, url(./assets/images/background/dark${sufixo}/${Background})`;
     }
-    body.style.backgroundImage = background ? background : theme ? '#000' : '#fff';
+    body.style.backgroundImage = background ? background : '#000';
     body.style.backgroundSize = 'cover';
 }
 

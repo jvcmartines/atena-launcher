@@ -543,9 +543,10 @@
     color: var(--color-dim);
 }
 
-/* ------------------------------------------------ tema e comportamento - */
+/* ---------------------------------------------------- comportamento - */
 
-.theme-box,
+/* `.active-theme` continua: o nome ficou do seletor de tema, que saiu, mas os
+   botões de idioma e de skin usam a mesma marcação de ativo. */
 .close-box {
     gap: 10px;
 }

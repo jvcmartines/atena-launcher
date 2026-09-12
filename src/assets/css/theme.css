@@ -57,6 +57,9 @@
     --light-color: #F7F1F3;
 }
 
+/* O launcher tem um visual só, o escuro. Havia um tema claro, e o seletor
+   automático seguia o Windows — o que fazia boa parte das pessoas abrir o
+   launcher num visual que ninguém da staff via nem testava. */
 .dark {
     --color: #F7EDF1;
     --color-dim: #B9A0AC;
@@ -80,31 +83,6 @@
     --scrim: linear-gradient(180deg, rgba(16, 3, 10, 0.52) 0%, rgba(16, 3, 10, 0.76) 52%, rgba(16, 3, 10, 0.95) 100%);
 
     --svg-color: brightness(0) saturate(100%) invert(93%) sepia(12%) saturate(360%) hue-rotate(310deg) brightness(103%) contrast(96%);
-}
-
-.light {
-    --color: #26101A;
-    --color-dim: #6C5460;
-    --color-faint: #937E89;
-
-    --background: #F4EEF0;
-    --background-element: rgba(58, 10, 34, 0.07);
-    --background-transparent: rgba(255, 252, 253, 0.82);
-
-    --glass: rgba(255, 251, 252, 0.76);
-    --glass-strong: rgba(255, 253, 254, 0.93);
-    --glass-hover: rgba(255, 255, 255, 0.9);
-
-    --stroke: rgba(58, 10, 34, 0.12);
-    --stroke-strong: rgba(184, 122, 40, 0.45);
-
-    --shadow: rgba(58, 10, 34, 0.18);
-    --shadow-card: 0 16px 40px rgba(58, 10, 34, 0.16);
-    --glow-gold: 0 0 24px rgba(223, 161, 59, 0.3);
-
-    --scrim: linear-gradient(180deg, rgba(255, 250, 246, 0.5) 0%, rgba(255, 248, 244, 0.72) 52%, rgba(252, 244, 240, 0.9) 100%);
-
-    --svg-color: brightness(0) saturate(100%) invert(9%) sepia(24%) saturate(1600%) hue-rotate(300deg) brightness(95%) contrast(96%);
 }
 
 /* --------------------------------------------------------- utilidades --- */
