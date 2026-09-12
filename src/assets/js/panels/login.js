@@ -6,7 +6,7 @@
 const { AZauth, Mojang } = require('minecraft-java-core');
 const { ipcRenderer } = require('electron');
 
-import { popup, database, changePanel, accountSelect, addAccount, config, setStatus, lang, discord } from '../utils.js';
+import { popup, database, changePanel, accountSelect, addAccount, config, setStatus, lang, discord, registro } from '../utils.js';
 
 class Login {
     static id = "login";
@@ -92,10 +92,27 @@ class Login {
                 if (account_connect == 'cancel' || !account_connect) {
                     popupLogin.closePopup();
                     return;
-                } else {
-                    await this.saveData(account_connect)
-                    popupLogin.closePopup();
                 }
+
+                // Login que falhou não é conta. O minecraft-java-core não lança
+                // exceção quando algo dá errado no caminho Microsoft → Xbox →
+                // Minecraft: ele DEVOLVE um objeto `{ error, errorType, ... }`.
+                // Esse objeto não é vazio, então passava pela conferência de
+                // cima e era salvo como conta — sem nome e sem uuid, que é o
+                // cartão "undefined". E como virava a conta selecionada, o
+                // launcher seguinte não tinha com o que autenticar.
+                if (account_connect.error) {
+                    registro.erro('ao adicionar conta', `${account_connect.errorType || '?'}: ${account_connect.error}`)
+                    popupLogin.openPopup({
+                        title: lang.t('login.failed_title'),
+                        content: this.motivoDoLogin(account_connect),
+                        color: 'red',
+                        options: true
+                    });
+                    return;
+                }
+
+                if (await this.saveData(account_connect)) popupLogin.closePopup();
 
             }).catch(err => {
                 popupLogin.openPopup({
@@ -145,8 +162,7 @@ class Login {
                 });
                 return;
             }
-            await this.saveData(MojangConnect)
-            popupLogin.closePopup();
+            if (await this.saveData(MojangConnect)) popupLogin.closePopup();
         });
     }
 
@@ -228,17 +244,53 @@ class Login {
                         return;
                     }
 
-                    await this.saveData(AZauthConnect)
-                    PopupLogin.closePopup();
+                    if (await this.saveData(AZauthConnect)) PopupLogin.closePopup();
                 });
             } else if (!AZauthConnect.A2F) {
-                await this.saveData(AZauthConnect)
-                PopupLogin.closePopup();
+                if (await this.saveData(AZauthConnect)) PopupLogin.closePopup();
             }
         });
     }
 
+    /**
+     * O que dizer quando o login da Microsoft não chega a uma conta de
+     * Minecraft.
+     *
+     * Os códigos XErr vêm do Xbox Live e são os únicos casos em que a pessoa
+     * consegue resolver sozinha — por isso ganham texto próprio. O resto cai
+     * numa mensagem genérica com o código, que é o que o suporte precisa.
+     */
+    motivoDoLogin(falha) {
+        const xerr = String(falha.XErr ?? '')
+        if (falha.error === 'NO_MINECRAFT_ACCOUNT' || falha.error === 'NO_MINECRAFT_ENTITLEMENTS') {
+            return lang.t('login.failed_no_minecraft')
+        }
+        if (xerr === '2148916233') return lang.t('login.failed_no_xbox')
+        if (xerr === '2148916238') return lang.t('login.failed_child')
+        if (xerr === '2148916235') return lang.t('login.failed_region')
+        if (falha.errorType === 'network') return lang.t('login.failed_network')
+        return lang.t('login.failed_generic', { code: `${falha.errorType || '?'} / ${falha.error}` })
+    }
+
     async saveData(connectionData) {
+        // Última barreira, valendo para todo tipo de login. Uma conta sem nome
+        // ou sem uuid não autentica nunca — salvá-la só adia o erro para a
+        // hora de jogar, e ainda a deixa selecionada.
+        //
+        // Mostra o erro e devolve false em vez de lançar: os quatro caminhos de
+        // login chamam isto de dentro de um ouvinte de clique, onde uma
+        // exceção vira rejeição sem tratamento — outro erro que só o log vê.
+        if (!connectionData?.name || !connectionData?.uuid || connectionData.error) {
+            registro.erro('ao salvar conta', 'login devolveu uma conta sem nome/uuid; nada foi salvo')
+            new popup().openPopup({
+                title: lang.t('login.failed_title'),
+                content: lang.t('login.failed_generic', { code: connectionData?.error || 'sem-identidade' }),
+                color: 'red',
+                options: true
+            });
+            return false;
+        }
+
         let configClient = await this.db.readData('configClient');
         let account = await this.db.createData('accounts', connectionData)
         let instanceSelect = configClient.instance_select
@@ -267,6 +319,7 @@ class Login {
         discord.heartbeat(account.name);
 
         changePanel('home');
+        return true;
     }
 }
 export default Login;

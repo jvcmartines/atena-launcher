@@ -1485,6 +1485,21 @@ class Home {
         let configClient = await this.db.readData('configClient')
         let instance = await config.getInstanceList()
         let authenticator = await this.db.readData('accounts', configClient.account_selected)
+
+        // Conta selecionada que não existe mais (ou que foi salva quebrada) não
+        // tem como autenticar. Melhor dizer isso aqui, com o que fazer, do que
+        // deixar o minecraft-java-core responder "Authenticator not found".
+        if (!authenticator?.name || !authenticator?.uuid) {
+            registro.erro('ao começar o jogo', `conta selecionada invalida (id ${configClient.account_selected})`)
+            new popup().openPopup({
+                title: lang.t('account.invalid_title'),
+                content: lang.t('account.invalid_text'),
+                color: 'red',
+                options: true
+            })
+            // A área de progresso só abre mais adiante; aqui não há o que fechar.
+            return
+        }
         let options = instance.find(i => i.name == configClient.instance_select)
 
         let infoStarting = document.querySelector(".info-starting-game-text")
@@ -1618,8 +1633,6 @@ class Home {
             console.error('[ajustes] nao consegui reaplicar:', err.message)
         }
 
-        launch.Launch(opt);
-
         launch.on('extract', extract => {
             ipcRenderer.send('main-window-progress-load')
             console.log(extract);
@@ -1749,6 +1762,15 @@ class Home {
             this.marked = false
             console.log(err);
         });
+
+        // Por último, e não logo depois de montar `opt`.
+        //
+        // O minecraft-java-core confere o autenticador DENTRO do Launch() e
+        // dispara `emit('error')` na mesma hora, antes de qualquer `await`.
+        // Com o Launch() chamado antes dos ouvintes, esse erro saía sem
+        // ninguém escutando: o Node o transformava em "Unhandled error", o
+        // jogo não abria e a pessoa não via mensagem nenhuma — só o log.
+        launch.Launch(opt);
     }
 }
 export default Home;

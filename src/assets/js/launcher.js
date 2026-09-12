@@ -237,8 +237,26 @@ class Launcher {
         if (accounts?.length) {
             for (let account of accounts) {
                 let account_ID = account.ID
-                if (account.error) {
+
+                // Conta salva quebrada: o que sobrou de um login que falhou.
+                //
+                // Era apagada aqui, mas este era o ÚNICO caminho de exclusão que
+                // não limpava `account_selected` — todos os outros limpam. A
+                // seleção ficava apontando para um ID que não existe mais, a
+                // escolha de uma conta substituta abaixo não disparava (a
+                // seleção não estava vazia, só errada), e na hora de jogar o
+                // minecraft-java-core recebia `undefined` e respondia
+                // "Authenticator not found".
+                //
+                // Sem `meta` também é quebrada: `account.meta.type` logo abaixo
+                // derrubaria a inicialização inteira.
+                if (account.error || !account.name || !account.uuid || !account.meta) {
+                    console.error(`[Account] conta ${account_ID} salva sem identidade; removida`);
                     await this.db.deleteData('accounts', account_ID)
+                    if (account_ID == account_selected) {
+                        configClient.account_selected = null
+                        await this.db.updateData('configClient', configClient)
+                    }
                     continue
                 }
                 if (account.meta.type === 'Xbox') {
@@ -338,20 +356,31 @@ class Launcher {
             configClient = await this.db.readData('configClient')
             account_selected = configClient ? configClient.account_selected : null
 
-            if (!account_selected) {
-                let uuid = accounts[0].ID
-                if (uuid) {
-                    configClient.account_selected = uuid
-                    await this.db.updateData('configClient', configClient)
-                    accountSelect(uuid)
-                }
-            }
-
+            // Sem conta nenhuma: volta ao login.
+            //
+            // Vinha DEPOIS da escolha de substituta, que fazia `accounts[0].ID`
+            // e derrubava a inicialização justamente quando a lista estava
+            // vazia. E gravava `config` — o módulo de configuração importado lá
+            // em cima — no lugar de `configClient`, apagando as preferências da
+            // pessoa (RAM, idioma, tudo) com um objeto sem sentido.
             if (!accounts.length) {
-                config.account_selected = null
-                await this.db.updateData('configClient', config);
+                configClient.account_selected = null
+                await this.db.updateData('configClient', configClient);
                 popupRefresh.closePopup()
                 return changePanel("login");
+            }
+
+            // A seleção precisa apontar para uma conta que EXISTE. Vazia não é o
+            // único caso ruim: um ID de conta apagada é pior, porque parece
+            // válido até a hora de jogar.
+            let selecionada = accounts.find(a => a.ID == account_selected)
+            if (!selecionada) {
+                selecionada = accounts[0]
+                configClient.account_selected = selecionada.ID
+                await this.db.updateData('configClient', configClient)
+                // accountSelect espera a conta inteira, não o ID: com o ID ele
+                // procurava `document.getElementById(undefined)` e quebrava.
+                await accountSelect(selecionada)
             }
 
             popupRefresh.closePopup()

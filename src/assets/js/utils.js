@@ -142,11 +142,16 @@ async function addAccount(data) {
 }
 
 async function accountSelect(data) {
+    // Conta sem ID é resto de login que falhou; não há cartão para marcar.
+    if (!data?.ID) return;
+
     let account = document.getElementById(`${data.ID}`);
     let activeAccount = document.querySelector('.account-select')
 
     if (activeAccount) activeAccount.classList.toggle('account-select');
-    account.classList.add('account-select');
+    // O cartão pode ainda não ter sido desenhado — marcar é cosmético, e não
+    // vale derrubar quem chamou por isso.
+    if (account) account.classList.add('account-select');
     if (data?.profile?.skins[0]?.base64) headplayer(data.profile.skins[0].base64);
 
     let nameElement = document.querySelector('.player-name');
