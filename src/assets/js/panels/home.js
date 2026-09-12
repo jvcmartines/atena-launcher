@@ -424,28 +424,19 @@ class Home {
 
         this.packState = state
 
+        // O nome e o estado do pack moraram aqui ate virarem a aba do modpack;
+        // hoje quem os mostra e ela. Aqui sobrou o que e desta tela: o botao.
         let playBTN = document.querySelector('.play-btn')
-        let nameElement = document.querySelector('.current-instance-name')
-        let stateElement = document.querySelector('.pack-state')
-
         if (playBTN) {
             playBTN.textContent = lang.t(
                 state === 'install' ? 'home.install' : state === 'update' ? 'home.update' : 'home.play'
             )
         }
 
-        if (nameElement) nameElement.textContent = instance.displayName || instance.name
-
-        if (stateElement) {
-            if (state === 'install') stateElement.textContent = lang.t('home.state_install')
-            else if (state === 'update') stateElement.textContent = lang.t('home.state_update', { version: remote?.version ?? '?' })
-            else if (remote) stateElement.textContent = lang.t('home.state_ready', { version: remote.version })
-            else stateElement.textContent = lang.t('home.state_unknown')
-        }
+        void remote
     }
 
     async repairPack(instance, base) {
-        document.querySelector('.instance-popup').style.display = 'none'
 
         let infoText = document.querySelector('.info-starting-game-text')
         let progressBar = document.querySelector('.progress-bar')
@@ -493,7 +484,6 @@ class Home {
      * staff sempre pede; assim a pessoa manda tudo de uma vez.
      */
     async reportProblem(instance, base) {
-        document.querySelector('.instance-popup').style.display = 'none'
 
         let configClient = await this.db.readData('configClient')
         let remote = await modpack.remoteVersion(instance.url)
