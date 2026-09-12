@@ -20,6 +20,27 @@
 
 /* Icons */
 
+/**
+ * Monocraft — a fonte de pixel da prévia do balão.
+ *
+ * A fonte de verdade do Minecraft é asset da Mojang e não se redistribui, mas
+ * a prévia diz que é "o resultado real" e o jogo desenha o balão com a fonte
+ * de pixel dele. Poppins ali dentro entregava o contrário.
+ *
+ * Monocraft tem as mesmas formas e licença SIL OFL 1.1, que permite embutir —
+ * a licença viaja junto, em Monocraft-OFL.txt, ao lado do arquivo.
+ *
+ * Só o necessário: subconjunto de Latin-1 e Latin Extended-A, que cobre os
+ * acentos dos três idiomas do launcher. 210 KB viraram 4,4 KB.
+ */
+@font-face {
+    font-family: 'Monocraft';
+    src: url('../fonts/Monocraft.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 @font-face {
     font-family: 'Icons';
     src: url('../fonts/Icons.woff2') format('woff2');

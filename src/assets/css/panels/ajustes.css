@@ -275,11 +275,21 @@
     filter: grayscale(1);
 }
 
+/* O jogo desenha o balão com a fonte de pixel do Minecraft, e a prévia diz que
+   é o resultado real — em Poppins ela dizia o contrário. Monocraft tem as
+   mesmas formas e licença aberta (ver font.css).
+
+   Sem suavização: uma fonte de pixel antiserrilhada vira um borrão cinza, que
+   é justamente o que o jogo não faz. */
 .balao {
     max-width: 230px;
     padding: 10px 13px;
-    font-size: 12.5px;
-    line-height: 1.45;
+    font-family: 'Monocraft', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    /* Monoespaçada já traz o avanço no próprio glifo; espaçar mais só afasta. */
+    letter-spacing: 0;
+    -webkit-font-smoothing: none;
     background: #FCFCFC;
     color: #191919;
     border: 2px solid #B4B4B9;

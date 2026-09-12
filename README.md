@@ -172,3 +172,13 @@ Three conditions from the license worth calling out:
 
 The original project's documentation (French and English) is in `docs/`, and
 describes the old PHP backend — which is **not** what this fork uses.
+
+### Bundled fonts
+
+- **Poppins** — SIL Open Font License 1.1.
+- **[Monocraft](https://github.com/IdreesInc/Monocraft)** by Idrees Hassan —
+  SIL Open Font License 1.1, copied in
+  [`src/assets/fonts/Monocraft-OFL.txt`](src/assets/fonts/Monocraft-OFL.txt).
+  Used only for the speech-bubble preview in Game settings, subset to Latin-1
+  and Latin Extended-A. Minecraft's own font is a Mojang asset and is not
+  redistributed here.
