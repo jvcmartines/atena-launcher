@@ -1,5 +1,5 @@
 /**
- * Configuração do servidor, lida do ambiente / arquivo .env.
+ * Configuração do servidor
  */
 const path = require('path');
 const fs = require('fs');
