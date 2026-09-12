@@ -14,6 +14,16 @@ name: Build do Launcher
 on:
   push:
     branches: [main]
+    # O que nao entra no launcher nao precisa recompila-lo nas tres
+    # plataformas. `server/` e o backend, que roda na VPS e e publicado por
+    # outro caminho; `docs/` e a documentacao herdada do projeto original.
+    # Sem isto, um conserto so de servidor gastava ~7 minutos de CI e
+    # reenviava 1 GB de instaladores identicos por cima de uma release que
+    # ja estava certa.
+    paths-ignore:
+      - 'server/**'
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 permissions:
