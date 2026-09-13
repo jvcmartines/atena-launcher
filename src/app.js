@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 
-const { app, ipcMain, BrowserWindow, dialog, Notification } = require('electron');
+const { app, ipcMain, BrowserWindow, dialog, Notification, shell } = require('electron');
 const { Microsoft } = require('minecraft-java-core');
 const { autoUpdater } = require('electron-updater')
 
@@ -104,6 +104,115 @@ ipcMain.on('main-window-show', () => MainWindow.getWindow().show())
 ipcMain.handle('Microsoft-window', async (_, client_id) => {
     return await new Microsoft(client_id).getAuth();
 })
+
+/**
+ * Login da Microsoft pelo navegador de verdade, com código de dispositivo.
+ *
+ * A janelinha acima é um navegador embutido do Electron, e ele não tem acesso
+ * ao Windows Hello: quem entra na conta Microsoft com PIN, digital ou rosto
+ * simplesmente não consegue passar da tela de senha ali dentro. No navegador
+ * do sistema isso funciona.
+ *
+ * Por que código de dispositivo e não um redirecionamento para o launcher: o
+ * servidor não define `client_id`, então vale o ID público do launcher oficial
+ * (00000000402b5328), e esse ID só aceita voltar para uma página interna da
+ * Microsoft — o navegador não teria como devolver o login para cá. Com o
+ * código, a pessoa entra no navegador e o launcher fica perguntando à
+ * Microsoft até ela autorizar.
+ *
+ * O escopo é o MESMO da janelinha (XboxLive.signin offline_access). Isso não é
+ * detalhe: o token sai do mesmo tipo, então `getAccount` monta a conta igual e
+ * a renovação automática do launcher (`refresh`) continua funcionando.
+ *
+ * O `device_code` fica aqui no processo principal; a tela só recebe o código
+ * curto que a pessoa digita.
+ */
+const MS_ID_PADRAO = '00000000402b5328';
+const MS_ESCOPO = 'XboxLive.signin offline_access';
+let loginNavegador = null;
+
+const formulario = campos => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(campos)
+});
+
+ipcMain.handle('microsoft-navegador-iniciar', async (_, client_id) => {
+    const id = client_id || MS_ID_PADRAO;
+
+    let resposta;
+    try {
+        resposta = await (await fetch('https://login.live.com/oauth20_connect.srf',
+            formulario({ client_id: id, scope: MS_ESCOPO, response_type: 'device_code' }))).json();
+    } catch (err) {
+        return { error: err.message, errorType: 'network' };
+    }
+
+    if (!resposta.device_code) {
+        return { error: resposta.error || 'sem-codigo', errorType: 'oauth2', ...resposta };
+    }
+
+    // Um login novo substitui o anterior: quem clicou duas vezes não fica com
+    // duas consultas correndo em paralelo.
+    if (loginNavegador) loginNavegador.cancelado = true;
+
+    loginNavegador = {
+        client_id: id,
+        device_code: resposta.device_code,
+        intervalo: (resposta.interval || 5) * 1000,
+        expira: Date.now() + (resposta.expires_in || 900) * 1000,
+        cancelado: false
+    };
+
+    // `otc` já deixa o código preenchido na página da Microsoft.
+    const link = `https://www.microsoft.com/link?otc=${encodeURIComponent(resposta.user_code)}`;
+    shell.openExternal(link);
+
+    return { codigo: resposta.user_code, link, expiraEm: resposta.expires_in || 900 };
+});
+
+ipcMain.handle('microsoft-navegador-aguardar', async () => {
+    const sessao = loginNavegador;
+    if (!sessao) return { error: 'sem-sessao', errorType: 'oauth2' };
+
+    while (!sessao.cancelado && Date.now() < sessao.expira) {
+        await new Promise(r => setTimeout(r, sessao.intervalo));
+        if (sessao.cancelado) break;
+
+        let token;
+        try {
+            token = await (await fetch('https://login.live.com/oauth20_token.srf', formulario({
+                client_id: sessao.client_id,
+                device_code: sessao.device_code,
+                grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+            }))).json();
+        } catch {
+            // A conexão oscilou: tenta de novo no próximo ciclo em vez de
+            // desistir de um login que a pessoa ainda está fazendo.
+            continue;
+        }
+
+        if (token.access_token) {
+            if (loginNavegador === sessao) loginNavegador = null;
+            return await new Microsoft(sessao.client_id).getAccount(token);
+        }
+        if (token.error === 'authorization_pending') continue;
+        if (token.error === 'slow_down') { sessao.intervalo += 5000; continue; }
+
+        // Recusou, expirou ou outro erro: não adianta insistir.
+        if (loginNavegador === sessao) loginNavegador = null;
+        return { error: token.error || 'desconhecido', errorType: 'oauth2', ...token };
+    }
+
+    if (sessao.cancelado) return 'cancel';
+    if (loginNavegador === sessao) loginNavegador = null;
+    return { error: 'expired_token', errorType: 'oauth2' };
+});
+
+ipcMain.handle('microsoft-navegador-cancelar', () => {
+    if (loginNavegador) loginNavegador.cancelado = true;
+    loginNavegador = null;
+});
 
 /**
  * Janela da tela de autorização do Discord.

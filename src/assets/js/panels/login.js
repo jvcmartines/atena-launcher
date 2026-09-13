@@ -4,7 +4,7 @@
  * Luuxis License v1.0 (ver LICENSE.md)
  */
 const { AZauth, Mojang } = require('minecraft-java-core');
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, shell, clipboard } = require('electron');
 
 import { popup, database, changePanel, accountSelect, addAccount, config, setStatus, lang, discord, registro } from '../utils.js';
 
@@ -76,52 +76,130 @@ class Login {
 
     async getMicrosoft() {
         console.log('Initializing Microsoft login...');
-        let popupLogin = new popup();
         let loginHome = document.querySelector('.login-home');
-        let microsoftBtn = document.querySelector('.connect-home');
         loginHome.style.display = 'block';
 
-        microsoftBtn.addEventListener("click", () => {
+        document.querySelector('.connect-home').addEventListener('click', () => this.entrarPeloNavegador());
+        document.querySelector('.connect-janela')?.addEventListener('click', () => this.entrarPelaJanela());
+
+        document.querySelector('.navegador-cancelar')?.addEventListener('click', () => {
+            // A tela volta na hora. O processo principal só percebe o
+            // cancelamento no próximo ciclo de consulta (até 5 s), e esperar
+            // por ele deixava o botão parecendo travado.
+            this.tentativa = (this.tentativa || 0) + 1;
+            this.mostrarEspera(false);
+            ipcRenderer.invoke('microsoft-navegador-cancelar');
+        });
+        document.querySelector('.navegador-reabrir')?.addEventListener('click', () => {
+            if (this.linkNavegador) shell.openExternal(this.linkNavegador);
+        });
+        document.querySelector('.navegador-copiar')?.addEventListener('click', () => {
+            const codigo = document.querySelector('.navegador-codigo')?.textContent;
+            if (!codigo) return;
+            // O clipboard do Electron, e não navigator.clipboard: este rejeita
+            // quando a janela não está em foco — e a pessoa acabou de voltar
+            // do navegador —, e a rejeição virava um popup de erro.
+            clipboard.writeText(codigo);
+            document.querySelector('.navegador-status').textContent = lang.t('login.browser_copied');
+        });
+    }
+
+    /** Troca os botões pela tela de espera, e volta. */
+    mostrarEspera(ligada) {
+        document.querySelector('.login-home .login-options').hidden = ligada;
+        document.querySelector('.login-navegador').hidden = !ligada;
+        if (!ligada) {
+            document.querySelector('.navegador-codigo').textContent = '';
+            document.querySelector('.navegador-status').textContent = '';
+        }
+    }
+
+    /**
+     * Entrar pelo navegador do sistema, com código de dispositivo.
+     *
+     * É o caminho principal porque a janela embutida não tem acesso ao Windows
+     * Hello: quem usa PIN, digital ou rosto na conta Microsoft não conseguia
+     * entrar por ela. A conversa com a Microsoft fica no processo principal
+     * (app.js); aqui só aparece o código e o resultado.
+     */
+    async entrarPeloNavegador() {
+        const status = document.querySelector('.navegador-status');
+
+        // Cada tentativa tem um número. Cancelar e clicar de novo em seguida
+        // deixa a resposta da tentativa antiga chegando atrasada — e ela não
+        // pode fechar a tela de espera da nova.
+        const minha = this.tentativa = (this.tentativa || 0) + 1;
+
+        let inicio;
+        try {
+            inicio = await ipcRenderer.invoke('microsoft-navegador-iniciar', this.config.client_id);
+        } catch (err) {
+            inicio = { error: err.message, errorType: 'network' };
+        }
+
+        if (minha !== this.tentativa) return;
+        if (inicio?.error) return this.falhaDoLogin(inicio);
+
+        this.linkNavegador = inicio.link;
+        document.querySelector('.navegador-codigo').textContent = inicio.codigo;
+        status.textContent = lang.t('login.browser_opened');
+        this.mostrarEspera(true);
+
+        const resultado = await ipcRenderer.invoke('microsoft-navegador-aguardar');
+        if (minha !== this.tentativa) return;
+        this.mostrarEspera(false);
+
+        if (resultado === 'cancel' || !resultado) return;
+        if (resultado.error) return this.falhaDoLogin(resultado);
+
+        let popupLogin = new popup();
+        popupLogin.openPopup({ title: lang.t('login.signing_in'), content: lang.t('common.wait'), color: 'var(--color)' });
+        if (await this.saveData(resultado)) popupLogin.closePopup();
+    }
+
+    /** A janela embutida de antes, mantida como alternativa. */
+    entrarPelaJanela() {
+        let popupLogin = new popup();
+        popupLogin.openPopup({
+            title: lang.t('login.signing_in'),
+            content: lang.t('common.wait'),
+            color: 'var(--color)'
+        });
+
+        ipcRenderer.invoke('Microsoft-window', this.config.client_id).then(async account_connect => {
+            if (account_connect == 'cancel' || !account_connect) {
+                popupLogin.closePopup();
+                return;
+            }
+
+            // Login que falhou não é conta. O minecraft-java-core não lança
+            // exceção quando algo dá errado no caminho Microsoft → Xbox →
+            // Minecraft: ele DEVOLVE um objeto `{ error, errorType, ... }`.
+            // Esse objeto não é vazio, então passava pela conferência de
+            // cima e era salvo como conta — sem nome e sem uuid, que é o
+            // cartão "undefined".
+            if (account_connect.error) return this.falhaDoLogin(account_connect);
+
+            if (await this.saveData(account_connect)) popupLogin.closePopup();
+
+        }).catch(err => {
             popupLogin.openPopup({
-                title: lang.t('login.signing_in'),
-                content: lang.t('common.wait'),
-                color: 'var(--color)'
+                title: lang.t('common.error'),
+                content: err,
+                options: true
             });
+        });
+    }
 
-            ipcRenderer.invoke('Microsoft-window', this.config.client_id).then(async account_connect => {
-                if (account_connect == 'cancel' || !account_connect) {
-                    popupLogin.closePopup();
-                    return;
-                }
-
-                // Login que falhou não é conta. O minecraft-java-core não lança
-                // exceção quando algo dá errado no caminho Microsoft → Xbox →
-                // Minecraft: ele DEVOLVE um objeto `{ error, errorType, ... }`.
-                // Esse objeto não é vazio, então passava pela conferência de
-                // cima e era salvo como conta — sem nome e sem uuid, que é o
-                // cartão "undefined". E como virava a conta selecionada, o
-                // launcher seguinte não tinha com o que autenticar.
-                if (account_connect.error) {
-                    registro.erro('ao adicionar conta', `${account_connect.errorType || '?'}: ${account_connect.error}`)
-                    popupLogin.openPopup({
-                        title: lang.t('login.failed_title'),
-                        content: this.motivoDoLogin(account_connect),
-                        color: 'red',
-                        options: true
-                    });
-                    return;
-                }
-
-                if (await this.saveData(account_connect)) popupLogin.closePopup();
-
-            }).catch(err => {
-                popupLogin.openPopup({
-                    title: lang.t('common.error'),
-                    content: err,
-                    options: true
-                });
-            });
-        })
+    /** Registra e mostra por que o login não chegou a uma conta. */
+    falhaDoLogin(falha) {
+        registro.erro('ao adicionar conta', `${falha.errorType || '?'}: ${falha.error}`)
+        new popup().openPopup({
+            title: lang.t('login.failed_title'),
+            content: this.motivoDoLogin(falha),
+            color: 'red',
+            options: true
+        });
     }
 
     async getCrack() {
@@ -269,6 +347,8 @@ class Login {
         if (xerr === '2148916238') return lang.t('login.failed_child')
         if (xerr === '2148916235') return lang.t('login.failed_region')
         if (falha.errorType === 'network') return lang.t('login.failed_network')
+        if (falha.error === 'expired_token') return lang.t('login.failed_expired')
+        if (falha.error === 'access_denied' || falha.error === 'authorization_declined') return lang.t('login.failed_declined')
         return lang.t('login.failed_generic', { code: `${falha.errorType || '?'} / ${falha.error}` })
     }
 

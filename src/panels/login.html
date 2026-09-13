@@ -25,8 +25,25 @@
             <div class="login-text" data-i18n="login.microsoft_text"></div>
 
             <div class="login-options">
-                <button class="connect connect-home" data-i18n="login.microsoft_button"></button>
+                <!-- O botao principal entra pelo navegador do sistema, onde o
+                     PIN, a digital e o rosto do Windows Hello funcionam. A
+                     janela embutida fica como alternativa, para quem tiver
+                     algum problema com o navegador. -->
+                <button class="connect connect-home" data-i18n="login.browser_button"></button>
+                <button class="login-janela connect-janela" data-i18n="login.window_button"></button>
                 <button class="cancel cancel-home" style="display: none;" data-i18n="common.back"></button>
+            </div>
+
+            <!-- Enquanto a pessoa entra no navegador. -->
+            <div class="login-navegador" hidden>
+                <div class="login-text" data-i18n="login.browser_waiting"></div>
+                <div class="navegador-codigo" title=""></div>
+                <div class="navegador-acoes">
+                    <button class="cancel navegador-copiar" data-i18n="login.browser_copy"></button>
+                    <button class="cancel navegador-reabrir" data-i18n="login.browser_reopen"></button>
+                </div>
+                <div class="navegador-status"></div>
+                <button class="cancel navegador-cancelar" data-i18n="common.cancel"></button>
             </div>
         </div>
 

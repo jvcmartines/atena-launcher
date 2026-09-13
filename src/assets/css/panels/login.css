@@ -103,6 +103,12 @@
     margin-top: 26px;
 }
 
+/* Sem isto o `display: flex` acima vence o atributo `hidden`, e os botões
+   continuavam na tela durante a espera do login pelo navegador. */
+.login-options[hidden] {
+    display: none;
+}
+
 .connect {
     padding: 14px;
     font-family: 'Poppins', sans-serif;
@@ -139,6 +145,70 @@
 .cancel:hover {
     color: var(--color);
     border-color: var(--stroke-strong);
+}
+
+/* ---------------------------------------------- login pelo navegador - */
+
+/* A alternativa pela janela embutida: texto, não botão, para não disputar
+   atenção com o caminho principal. */
+.login-janela {
+    padding: 4px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 12px;
+    color: var(--color-faint);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.login-janela:hover {
+    color: var(--color-dim);
+}
+
+.login-navegador {
+    margin-top: 22px;
+}
+
+.login-navegador[hidden] {
+    display: none;
+}
+
+/* O código é o que a pessoa vai conferir com a página da Microsoft: grande,
+   espaçado e em fonte de largura fixa, para não confundir 0 com O. */
+.navegador-codigo {
+    margin: 18px 0 14px;
+    padding: 14px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--gold);
+    background: var(--background-element);
+    border: 1px solid var(--stroke);
+    border-radius: 13px;
+    user-select: all;
+}
+
+.navegador-acoes {
+    display: flex;
+    gap: 10px;
+}
+
+.navegador-acoes .cancel {
+    flex: 1;
+}
+
+.navegador-status {
+    min-height: 20px;
+    margin: 14px 0 10px;
+    font-size: 12.5px;
+    color: var(--color-dim);
+}
+
+.navegador-cancelar {
+    width: 100%;
 }
 
 /* -------------------------------------------------------------- discord - */
