@@ -53,7 +53,7 @@ class Splash {
         // sem internet, API fora do ar) não pode impedir ninguém de jogar:
         // seguimos direto para a checagem de manutenção.
         ipcRenderer.invoke('update-app').catch(err => {
-            console.error('[update] checagem falhou, seguindo sem atualizar:', err);
+            console.error('[update] checagem falhou, prosseguindo sem atualizar:', err);
             this.maintenanceCheck();
         });
 
