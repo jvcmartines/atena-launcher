@@ -7,7 +7,7 @@
  * máquina do jogador: Instalar (primeira vez), Atualizar (a staff publicou uma
  * versão nova) ou Jogar (está tudo em dia).
  */
-import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho, pacote, preferencias } from '../utils.js'
+import { config, database, logger, changePanel, appdata, setStatus, pkg, popup, lang, backup, modpack, discord, serverStatus, getLastStatus, showDiscordIdentity, news, suporte, presenca, registro, Pausa, importar, extras, desempenho, pacote, preferencias, forge } from '../utils.js'
 
 const { Launch } = require('minecraft-java-core')
 const { shell, ipcRenderer } = require('electron')
@@ -43,6 +43,9 @@ class Home {
         this.contaBotao()
         this.suporteBotao()
         this.richPresence()
+        // Desde a abertura, e não só dentro de uma partida: a falha do patcher
+        // tem que ser reconhecida venha de onde vier.
+        this.basePath().then(base => this.vigiarForge(base)).catch(() => {})
         document.querySelector('.settings-btn').addEventListener('click', e => changePanel('settings'))
     }
 
@@ -462,6 +465,19 @@ class Home {
         } catch (err) {
             console.error('[modpack] a verificação falhou:', err)
             resultado = null
+        }
+
+        // "Verificar e reparar" é onde a staff manda quem está com problema, e
+        // um Forge quebrado impede o jogo de abrir tanto quanto um mod faltando.
+        try {
+            infoText.innerHTML = lang.t('home.forge_checking')
+            const apagados = await forge.conferir(base)
+            if (apagados.length) {
+                registro.escrever(`[forge] verificar e reparar: ${apagados.length} arquivo(s) quebrado(s) apagado(s): ${apagados.join(', ')}`)
+                if (resultado) resultado.broken = (resultado.broken || 0) + apagados.length
+            }
+        } catch (err) {
+            console.error('[forge] a conferência falhou:', err)
         }
 
         this.sairDoProgresso()
@@ -1480,6 +1496,66 @@ class Home {
 
     /* ---------------------------------------------------------- jogar --- */
 
+    /**
+     * Reconhece a falha do patcher do Forge e repara.
+     *
+     * A falha escapa de dentro do minecraft-java-core: o patcher emite o erro
+     * num objeto que ninguém escuta, o Node o transforma em erro solto, e a
+     * partida fica presa em "aplicando patch". Não dá para escutar lá dentro
+     * sem alterar a biblioteca, então a falha é pega onde chega — no registro
+     * de erros.
+     *
+     * O reparo: grava no log a saída do patcher (a causa real), apaga a pasta
+     * do Forge — refeita do zero, sem tocar no modpack — e tenta de novo uma
+     * vez. Se falhar de novo, explica em vez de repetir para sempre.
+     */
+    vigiarForge(base) {
+        this.baseDoForge = base
+        if (this.vigiandoForge) return
+        this.vigiandoForge = true
+
+        registro.interceptar((contexto, mensagem) => {
+            if (!/patcher Forge|classe principale dans le JAR/i.test(String(mensagem))) return false
+            this.forgeFalhou(this.baseDoForge, mensagem)
+            return true
+        })
+    }
+
+    async forgeFalhou(base, mensagem) {
+        // Duas emissões da mesma falha não podem disparar dois reparos.
+        if (this.reparandoForge) return
+        this.reparandoForge = true
+
+        const saida = (this.saidaDoPatcher || []).join('\n')
+        registro.escrever(`[forge] o patcher falhou: ${mensagem}\n--- últimas linhas do patcher ---\n${saida || '(nenhuma saída)'}`)
+
+        let infoStarting = document.querySelector('.info-starting-game-text')
+        try {
+            if (infoStarting) infoStarting.innerHTML = lang.t('home.forge_repairing')
+            await forge.refazer(base)
+            registro.escrever('[forge] pasta do Forge apagada para ser refeita')
+        } catch (err) {
+            registro.escrever(`[forge] não consegui apagar a pasta do Forge: ${err?.message || err}`)
+        }
+
+        ipcRenderer.send('main-window-progress-reset')
+        this.sairDoProgresso()
+        this.reparandoForge = false
+
+        if (!this.forgeJaRefeito) {
+            this.forgeJaRefeito = true
+            registro.escrever('[forge] tentando de novo com a pasta refeita')
+            return this.executar(() => this.startGame())
+        }
+
+        new popup().openPopup({
+            title: lang.t('home.forge_failed_title'),
+            content: lang.t('home.forge_failed_text'),
+            color: 'red',
+            options: true
+        })
+    }
+
     async startGame() {
         let launch = new Launch()
         let configClient = await this.db.readData('configClient')
@@ -1540,7 +1616,11 @@ class Home {
             // modpack inteiro.
             url: options.verify ? options.url : null,
             authenticator: authenticator,
-            timeout: 10000,
+            // Quanto tempo esperar o servidor COMEÇAR a responder cada arquivo.
+            // Eram 10 s, e numa conexão ruim isso abortava downloads no meio —
+            // foi o que deixou bibliotecas do Forge vazias na máquina de um
+            // jogador, e o patcher falhando dali em diante.
+            timeout: 30000,
             path: base,
             instance: options.name,
             version: options.loader.minecraft_version,
@@ -1577,6 +1657,22 @@ class Home {
         }
 
         await this.entrarEmProgresso()
+
+        // Bibliotecas do Forge quebradas não se consertam sozinhas: o
+        // minecraft-java-core só pergunta se o arquivo existe, e o que ficou
+        // vazio de um download abortado existe. Conferir por tamanho e hash e
+        // apagar o que estiver errado faz a biblioteca baixar de novo.
+        infoStarting.innerHTML = lang.t('home.forge_checking')
+        try {
+            const apagados = await forge.conferir(base)
+            if (apagados.length) {
+                registro.escrever(`[forge] ${apagados.length} arquivo(s) quebrado(s) apagado(s) para baixar de novo: ${apagados.join(', ')}`)
+            }
+        } catch (err) {
+            console.error('[forge] a conferência falhou:', err)
+        }
+        this.saidaDoPatcher = []
+        this.vigiarForge(base)
 
         infoStarting.innerHTML = lang.t(
             state === 'install' ? 'home.installing' : state === 'update' ? 'home.updating' : 'home.connecting'
@@ -1675,6 +1771,10 @@ class Home {
 
         launch.on('patch', patch => {
             console.log(patch);
+            // A saída do patcher é o que diz QUAL passo falhou e por quê. Ela só
+            // ia para o console, e o relatório do jogador chegava sem a causa.
+            // Guarda as últimas linhas para irem ao log se ele falhar.
+            this.saidaDoPatcher = [...(this.saidaDoPatcher || []), ...String(patch).split(/\r?\n/).filter(Boolean)].slice(-80)
             ipcRenderer.send('main-window-progress-load')
             infoStarting.innerHTML = lang.t('home.patching')
         });

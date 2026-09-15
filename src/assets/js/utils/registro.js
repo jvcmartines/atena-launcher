@@ -21,6 +21,22 @@ class Registro {
     constructor() {
         this.arquivo = null;
         this.aoErro = null;
+        this.interceptadores = [];
+    }
+
+    /**
+     * Um erro conhecido, com conserto conhecido.
+     *
+     * `fn(contexto, erro)` é chamada para cada erro, depois de ele ir para o
+     * log. Se devolver true, o erro foi assumido por quem sabe resolvê-lo, e o
+     * popup genérico de "algo deu errado" não aparece.
+     *
+     * Existe por causa do patcher do Forge: a falha dele escapa de dentro do
+     * minecraft-java-core sem ninguém escutando, e só chega aqui, como erro
+     * solto. É aqui que dá para reconhecê-la e reparar.
+     */
+    interceptar(fn) {
+        this.interceptadores.push(fn);
     }
 
     /**
@@ -80,6 +96,12 @@ class Registro {
 
         console.error(`[${contexto}]`, erro);
         this.escrever(`ERRO em ${contexto}: ${mensagem}${pilha ? '\n' + pilha : ''}`);
+
+        for (const fn of this.interceptadores) {
+            try {
+                if (fn(contexto, mensagem, erro)) return;
+            } catch { /* um interceptador quebrado não pode esconder o erro */ }
+        }
 
         try {
             if (this.aoErro) this.aoErro(contexto, mensagem);

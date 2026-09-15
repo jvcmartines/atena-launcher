@@ -30,6 +30,7 @@ import extras from './utils/extras.js';
 import desempenho from './utils/desempenho.js';
 import pacote from './utils/pacote.js';
 import preferencias from './utils/preferencias.js';
+import forge from './utils/forge.js';
 
 /**
  * Fundo de época.
@@ -324,5 +325,6 @@ export {
     extras as extras,
     desempenho as desempenho,
     pacote as pacote,
-    preferencias as preferencias
+    preferencias as preferencias,
+    forge as forge
 }
